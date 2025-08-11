@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Backend (Firebase, Patched)</title>
+<title>BASIC Calendar – Backend (Firebase, Patched + Fixed)</title>
 <style>
   :root{
     --bg:#0b1324; --card:#121a31; --ink:#e8eefc; --muted:#9fb0d3;
@@ -174,7 +174,7 @@
   // 2) Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const COL = db.collection('basic_calendar'); // will store a single doc: 'live'
+  const COL = db.collection('basic_calendar'); // single doc: 'live'
 
   // 3) Runtime Admin Code (no secret in source control)
   let ADMIN_CODE = sessionStorage.getItem('BASIC_ADMIN_CODE') || '';
@@ -320,7 +320,7 @@
     alert('Admin code cleared. Click “Publish to Cloud” and enter the new code.');
   };
 
-  document.getElementById('publish'.onclick = async () => {
+  document.getElementById('publish').onclick = async () => {
     if (!EVENTS.length) { alert('No events to publish'); return; }
     if (!ensureAdminCode()) { alert('Admin code is required to publish.'); return; }
 
@@ -339,14 +339,6 @@
       } else {
         alert('Publish failed. Check Firebase config & rules, then try again.');
       }
-    }
-  };
-    try{
-      await COL.doc('live').set(payload);
-      alert('Published! The public calendar will refresh automatically.');
-    }catch(err){
-      console.error(err);
-      alert('Publish failed. Check Firebase config, rules, and admin code.');
     }
   };
 
