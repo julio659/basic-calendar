@@ -3,80 +3,156 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Backend (Cloud)</title>
+<title>BASIC Calendar – Backend (Firebase, Patched)</title>
 <style>
-  :root{--bg:#0b1324;--card:#121a31;--ink:#e8eefc;--muted:#9fb0d3;--accent:#6cc2ff;--accent2:#b87cff;--ok:#47d17a;--warn:#ffb454;--danger:#ff6b6b;--radius:16px;--shadow:0 12px 36px rgba(0,0,0,.3)}
-  *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1324 0%,#0e1a34 100%);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{position:sticky;top:0;z-index:5;background:rgba(11,19,36,.8);backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid #1e2a4a}
-  .wrap{max-width:1100px;margin:auto;padding:20px}h1{margin:0 0 6px}.subtitle{color:var(--muted)}
-  .grid{display:grid;gap:16px}.two{grid-template-columns:1.2fr .8fr}@media (max-width:980px){.two{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid #1d2a4d;border-radius:var(--radius);box-shadow:var(--shadow)}.pad{padding:16px}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  label{display:block;font-weight:600;margin:8px 0 4px}
-  input,select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #30426e;background:#0f1a33;color:var(--ink)}
-  textarea{min-height:90px}.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+  :root{
+    --bg:#0b1324; --card:#121a31; --ink:#e8eefc; --muted:#9fb0d3;
+    --accent:#6cc2ff; --accent2:#b87cff; --ok:#47d17a; --warn:#ffb454; --danger:#ff6b6b;
+    --radius:16px; --shadow:0 12px 36px rgba(0,0,0,.3)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1324 0%,#0e1a34 100%);color:var(--ink);
+       font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:var(--accent)}
+  header{position:sticky;top:0;z-index:5;background:rgba(11,19,36,.85);backdrop-filter:saturate(160%) blur(10px);
+         border-bottom:1px solid #1e2a4a}
+  .wrap{max-width:1100px;margin:auto;padding:20px}
+  h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
+  .subtitle{color:var(--muted)}
+  .grid{display:grid;gap:16px}
+  .two{grid-template-columns:1.25fr .75fr}
+  @media (max-width:1024px){.two{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #1d2a4d;border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card h2{margin:0 0 10px;font-size:18px}
+  .pad{padding:16px}
+  label{display:block;font-weight:600;margin:10px 0 6px}
+  input, select, textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #30426e;background:#0f1a33;color:var(--ink)}
+  textarea{min-height:100px}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
   button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
-  .primary{background:var(--accent);color:#051127}.ghost{background:#0f1a33;color:var(--ink);border:1px solid #2c3e6a}
-  .ok{background:var(--ok);color:#032514}.warn{background:var(--warn);color:#3a2200}.danger{background:var(--danger);color:#2b0707}
-  .list{display:grid;gap:10px}.event-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#101a34;border:1px solid #22325e;border-radius:14px;padding:10px}
-  .event-item img{width:54px;height:54px;object-fit:cover;border-radius:10px}.pill{font-size:12px;background:#0f284d;color:#b9d4ff;border:1px solid #214a89;padding:2px 8px;border-radius:999px}
-  .muted{color:var(--muted)}.mini{font-size:12px;color:var(--muted)}.hidden{display:none!important}
+  .primary{background:var(--accent);color:#051127}
+  .ghost{background:#0f1a33;color:var(--ink);border:1px solid #2c3e6a}
+  .ok{background:var(--ok);color:#032514}
+  .warn{background:var(--warn);color:#3a2200}
+  .danger{background:var(--danger);color:#2b0707}
+  .list{display:grid;gap:10px}
+  .event-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#101a34;border:1px solid #22325e;border-radius:14px;padding:10px}
+  .event-item img{width:60px;height:60px;object-fit:cover;border-radius:10px}
+  .pill{font-size:12px;background:#0f284d;color:#b9d4ff;border:1px solid #214a89;padding:2px 8px;border-radius:999px}
+  .muted{color:var(--muted)}
+  .mini{font-size:12px;color:var(--muted)}
+  .note{font-size:13px;color:var(--muted);margin-top:8px}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>BASIC Calendar – Backend (Cloud)</h1>
-    <div class="subtitle">Add events and click <b>Publish to Cloud</b>. Frontend updates instantly.</div>
+    <h1>BASIC Calendar – Backend</h1>
+    <div class="subtitle">Add / edit / delete events and <b>Publish to Cloud</b>. Frontend updates instantly.</div>
   </div>
 </header>
 
 <div class="wrap grid two">
+  <!-- LEFT: Editor -->
   <section class="card pad">
     <h2>Create or Edit Event</h2>
     <div class="split">
-      <div><label>Title</label><input id="title" placeholder="e.g., Family Literacy Night"/></div>
-      <div><label>Category</label><input id="category" placeholder="Workshop, Fundraiser"/></div>
+      <div>
+        <label>Title</label>
+        <input id="title" placeholder="e.g., Family Literacy Night" />
+      </div>
+      <div>
+        <label>Category</label>
+        <input id="category" placeholder="Workshop, Fundraiser" />
+      </div>
     </div>
-    <label>Description</label><textarea id="description" placeholder="Short description shown on the calendar"></textarea>
+
+    <label>Description</label>
+    <textarea id="description" placeholder="Short description shown on the calendar"></textarea>
+
     <div class="split">
-      <div><label>Start</label><input id="start" type="datetime-local"/></div>
-      <div><label>End</label><input id="end" type="datetime-local"/></div>
+      <div>
+        <label>Start Date & Time</label>
+        <input id="start" type="datetime-local" />
+      </div>
+      <div>
+        <label>End Date & Time</label>
+        <input id="end" type="datetime-local" />
+      </div>
     </div>
+
     <div class="split">
-      <div><label>Location</label><input id="location" placeholder="Address or Online"/></div>
-      <div><label>RSVP / Ticket URL</label><input id="rsvp" placeholder="https://…"/></div>
+      <div>
+        <label>Location</label>
+        <input id="location" placeholder="Address or Online" />
+      </div>
+      <div>
+        <label>RSVP / Ticket URL (optional)</label>
+        <input id="rsvp" placeholder="https://…" />
+      </div>
     </div>
+
     <div class="split">
-      <div><label>Image URL</label><input id="image" placeholder="https://…/photo.jpg"/></div>
-      <div><label>Video (YouTube/Vimeo)</label><input id="video" placeholder="https://youtu.be/… or https://vimeo.com/…"/></div>
+      <div>
+        <label>Image (URL)</label>
+        <input id="image" placeholder="https://…/photo.jpg" />
+      </div>
+      <div>
+        <label>Video (YouTube/Vimeo URL)</label>
+        <input id="video" placeholder="https://youtu.be/… or https://vimeo.com/…" />
+      </div>
     </div>
-    <label>Attachments (comma-separated URLs)</label><input id="attachments" placeholder="https://…/flyer.pdf, https://…/agenda.docx"/>
+
+    <label>Attachments (comma‑separated URLs – PDFs, docs)</label>
+    <input id="attachments" placeholder="https://…/flyer.pdf, https://…/agenda.docx" />
+
     <details style="margin-top:10px"><summary>Repeating (optional)</summary>
       <div class="split" style="margin-top:8px">
-        <div><label>Frequency</label>
-          <select id="freq"><option value="none">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option><option value="YEARLY">Yearly</option></select>
+        <div>
+          <label>Frequency</label>
+          <select id="freq">
+            <option value="none">Does not repeat</option>
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
+            <option value="YEARLY">Yearly</option>
+          </select>
         </div>
-        <div><label>Every…</label><input id="interval" type="number" value="1" min="1"/></div>
+        <div>
+          <label>Every…</label>
+          <input id="interval" type="number" value="1" min="1" />
+        </div>
       </div>
       <div class="split">
-        <div><label>Days (WEEKLY) MO,TU,WE…</label><input id="byday" placeholder="MO,TU"/></div>
-        <div><label>Until</label><input id="until" type="date"/></div>
+        <div>
+          <label>Days (for WEEKLY) – e.g. MO,TU,WE</label>
+          <input id="byday" placeholder="MO,TU,WE" />
+        </div>
+        <div>
+          <label>Until (end date)</label>
+          <input id="until" type="date" />
+        </div>
       </div>
+      <div class="note">This uses a simple iCalendar RRULE. Leave blank for one‑time events.</div>
     </details>
+
     <div class="actions">
       <button class="primary" id="saveLocal">Save (Local)</button>
       <button class="ok" id="publish">Publish to Cloud</button>
       <button class="ghost" id="exportJson">Export JSON</button>
       <button class="ghost" id="exportIcs">Export ICS</button>
+      <button class="warn" id="resetForm">Reset Form</button>
       <button class="danger" id="clearAll">Clear Local</button>
     </div>
+    <div class="note">Tip: Use <b>Save (Local)</b> to add multiple events, then publish all at once.</div>
   </section>
 
+  <!-- RIGHT: List -->
   <section class="card pad">
-    <h2>Events</h2>
+    <h2>Events (Local Preview)</h2>
     <div id="list" class="list"></div>
+    <div class="note">After changes, click <b>Publish to Cloud</b> to update the public calendar.</div>
   </section>
 </div>
 
@@ -86,28 +162,40 @@
 <script>
   // 1) Paste your Firebase config here
   const firebaseConfig = {
-  apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
-  authDomain: "basic-calendar-6404a.firebaseapp.com",
-  projectId: "basic-calendar-6404a",
-  storageBucket: "basic-calendar-6404a.firebasestorage.app",
-  messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
+    apiKey: "PASTE_HERE",
+    authDomain: "PASTE_HERE",
+    projectId: "PASTE_HERE",
+    storageBucket: "PASTE_HERE",
+    messagingSenderId: "PASTE_HERE",
+    appId: "PASTE_HERE"
   };
-  const ADMIN_CODE = "uQ_Y7.e_f7Z"; // must match Firestore rule
 
+  // 2) Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  const COL = db.collection('basic_calendar');
+  const COL = db.collection('basic_calendar'); // will store a single doc: 'live'
 
+  // 3) Runtime Admin Code (no secret in source control)
+  let ADMIN_CODE = sessionStorage.getItem('BASIC_ADMIN_CODE') || '';
+  function ensureAdminCode(){
+    if(!ADMIN_CODE){
+      const input = prompt('Enter Admin Code to enable publishing:') || '';
+      ADMIN_CODE = input.trim();
+      if(ADMIN_CODE) sessionStorage.setItem('BASIC_ADMIN_CODE', ADMIN_CODE);
+    }
+    return !!ADMIN_CODE;
+  }
+
+  // ===== Local storage & state =====
   const LS='basic_events_v2';
   const $=s=>document.querySelector(s);
   const load=()=>{try{return JSON.parse(localStorage.getItem(LS))||[]}catch{ return []}};
   const save=v=>localStorage.setItem(LS,JSON.stringify(v));
 
   let EVENTS = load();
-  render();
+  let EDIT_INDEX = -1; // -1 means create new
 
-  // helpers
+  // ===== Helpers =====
   function rrule(){
     const f=$('#freq').value; if(f==='none') return '';
     const parts=[`FREQ=${f}`];
@@ -116,11 +204,11 @@
     const u=$('#until').value; if(u) parts.push(`UNTIL=${u.replace(/-/g,'')}T235959Z`);
     return parts.join(';');
   }
-  const iso = s=>s; // inputs already yyyy-mm-ddThh:mm
+  const iso = s=>s; // datetime-local already yyyy-mm-ddThh:mm
 
   function getForm(){
     return {
-      id:'ev_'+Date.now(),
+      id: (EDIT_INDEX>-1 && EVENTS[EDIT_INDEX])? EVENTS[EDIT_INDEX].id : ('ev_'+Date.now()),
       title:$('#title').value.trim(),
       category:$('#category').value.trim(),
       description:$('#description').value.trim(),
@@ -135,36 +223,112 @@
     }
   }
 
-  function render(){
-    const box=$('#list'); box.innerHTML='';
-    EVENTS.sort((a,b)=>new Date(a.start)-new Date(b.start)).forEach((e,i)=>{
-      const row=document.createElement('div'); row.className='event-item';
-      row.innerHTML=`<img src="${e.image||'https://picsum.photos/seed/'+encodeURIComponent(e.title)+'/120/120'}"/><div><div><strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span></div><div class="muted mini">${new Date(e.start).toLocaleString([], {dateStyle:'medium', timeStyle:'short'})}</div><div class="mini">${e.location||''}</div></div>`;
-      const del=document.createElement('button'); del.textContent='Delete'; del.className='danger'; del.onclick=()=>{EVENTS.splice(i,1); save(EVENTS); render();};
-      row.appendChild(del); box.appendChild(row);
-    });
+  function setForm(e={}){
+    const f=(id,val)=>{ const el=document.getElementById(id); if(el) el.value = val||''; };
+    f('title', e.title); f('category', e.category); f('description', e.description);
+    f('start', e.start); f('end', e.end); f('location', e.location);
+    f('rsvp', e.rsvp); f('image', e.image); f('video', e.video);
+    document.getElementById('attachments').value = (e.attachments||[]).join(', ');
+    // Reset repeats to defaults if empty
+    document.getElementById('freq').value = (e.rrule? (e.rrule.match(/FREQ=([A-Z]+)/)||[])[1] : 'none') || 'none';
+    document.getElementById('interval').value = (e.rrule? (e.rrule.match(/INTERVAL=(\d+)/)||[])[1] : 1) || 1;
+    document.getElementById('byday').value = (e.rrule? (e.rrule.match(/BYDAY=([A-Z,]+)/)||[])[1] : '') || '';
+    const until = (e.rrule? (e.rrule.match(/UNTIL=(\d{8})/)||[])[1] : '') || '';
+    document.getElementById('until').value = until? `${until.slice(0,4)}-${until.slice(4,6)}-${until.slice(6,8)}` : '';
   }
 
-  // Fixed: escape map typo caused script crash in previous version
-  function escapeICS(s){return String(s).replace(/[\\;,\n]/g,m=>({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
+  function render(){
+    const box=$('#list'); box.innerHTML='';
+    EVENTS
+      .slice()
+      .sort((a,b)=>new Date(a.start)-new Date(b.start))
+      .forEach((e,i)=>{
+        const row=document.createElement('div'); row.className='event-item';
+        row.innerHTML=`
+          <img src="${e.image||('https://picsum.photos/seed/'+encodeURIComponent(e.title||'event')+'/120/120')}" alt="">
+          <div>
+            <div><strong>${e.title||'Untitled'}</strong> <span class="pill">${e.category||'General'}</span></div>
+            <div class="muted mini">${new Date(e.start).toLocaleString([], {dateStyle:'medium', timeStyle:'short'})} – ${new Date(e.end||e.start).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</div>
+            <div class="mini">${e.location||''}</div>
+          </div>
+        `;
+        const btns=document.createElement('div'); btns.style.display='flex'; btns.style.gap='8px';
+
+        const edit=document.createElement('button'); edit.className='ghost'; edit.textContent='Edit';
+        edit.onclick=()=>{ EDIT_INDEX=i; setForm(e); window.scrollTo({top:0, behavior:'smooth'}); };
+
+        const del=document.createElement('button'); del.className='danger'; del.textContent='Delete';
+        del.onclick=()=>{
+          if(!confirm(`Delete “${e.title}”?`)) return;
+          EVENTS.splice(i,1); save(EVENTS); render();
+        };
+
+        btns.append(edit, del); row.appendChild(btns); box.appendChild(row);
+      });
+  }
+
+  // Fixed: escape map typo that previously broke scripts
+  function escapeICS(s){return String(s).replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
   function toICS(list){
     const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`];
-    list.forEach(ev=>{lines.push('BEGIN:VEVENT');lines.push('UID:'+ev.id);lines.push('SUMMARY:'+escapeICS(ev.title));if(ev.description)lines.push('DESCRIPTION:'+escapeICS(ev.description));if(ev.location)lines.push('LOCATION:'+escapeICS(ev.location));if(ev.start)lines.push('DTSTART:'+new Date(ev.start).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z');if(ev.end)lines.push('DTEND:'+new Date(ev.end).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z');if(ev.rrule)lines.push('RRULE:'+ev.rrule);lines.push('END:VEVENT')});
-    lines.push('END:VCALENDAR');return lines.join('\n');}
+    list.forEach(ev=>{
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:'+ev.id);
+      lines.push('SUMMARY:'+escapeICS(ev.title||''));
+      if(ev.description) lines.push('DESCRIPTION:'+escapeICS(ev.description));
+      if(ev.location) lines.push('LOCATION:'+escapeICS(ev.location));
+      if(ev.start) lines.push('DTSTART:'+new Date(ev.start).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z');
+      if(ev.end)   lines.push('DTEND:'+new Date(ev.end).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z');
+      if(ev.rrule) lines.push('RRULE:'+ev.rrule);
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\n');
+  }
 
-  // Buttons
-  $('#saveLocal').onclick=()=>{ const ev=getForm(); if(!ev.title||!ev.start){alert('Title and Start required');return;} EVENTS.push(ev); save(EVENTS); render(); };
-  $('#clearAll').onclick=()=>{ if(confirm('Clear local events?')){ localStorage.removeItem(LS); EVENTS=[]; render(); }};
-  $('#exportJson').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({events:EVENTS},null,2)])); a.download='events.json'; a.click(); };
-  $('#exportIcs').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([toICS(EVENTS)])); a.download='events.ics'; a.click(); };
-
-  // Publish to Cloud (single doc with id 'live')
-  $('#publish').onclick=async()=>{
-    if(!EVENTS.length){ alert('No events to publish'); return; }
-    const payload={events:EVENTS, updated:Date.now(), adminCode:ADMIN_CODE};
-    try{ await COL.doc('live').set(payload); alert('Published! Your public calendar will refresh automatically.'); }
-    catch(err){ console.error(err); alert('Publish failed. Check your Firebase config and rules.'); }
+  // ===== Buttons =====
+  document.getElementById('saveLocal').onclick=()=>{
+    const ev=getForm();
+    if(!ev.title||!ev.start){ alert('Title and Start are required.'); return; }
+    if(EDIT_INDEX>-1){ EVENTS[EDIT_INDEX]=ev; EDIT_INDEX=-1; }
+    else EVENTS.push(ev);
+    save(EVENTS); render();
   };
+
+  document.getElementById('resetForm').onclick=()=>{ EDIT_INDEX=-1; setForm({}); };
+
+  document.getElementById('clearAll').onclick=()=>{
+    if(confirm('Clear all locally saved events?')){ localStorage.removeItem(LS); EVENTS=[]; EDIT_INDEX=-1; render(); }
+  };
+
+  document.getElementById('exportJson').onclick=()=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify({events:EVENTS},null,2)], {type:'application/json'}));
+    a.download='events.json'; a.click();
+  };
+
+  document.getElementById('exportIcs').onclick=()=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([toICS(EVENTS)], {type:'text/calendar'}));
+    a.download='events.ics'; a.click();
+  };
+
+  document.getElementById('publish').onclick=async()=>{
+    if(!EVENTS.length){ alert('No events to publish'); return; }
+    if(!ensureAdminCode()){ alert('Admin code is required to publish.'); return; }
+
+    const payload={ events: EVENTS, updated: Date.now(), adminCode: ADMIN_CODE };
+    try{
+      await COL.doc('live').set(payload);
+      alert('Published! The public calendar will refresh automatically.');
+    }catch(err){
+      console.error(err);
+      alert('Publish failed. Check Firebase config, rules, and admin code.');
+    }
+  };
+
+  // ===== Init =====
+  render();
 </script>
 </body>
 </html>
