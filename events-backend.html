@@ -140,6 +140,7 @@
     <div class="actions">
       <button class="primary" id="saveLocal">Save (Local)</button>
       <button class="ok" id="publish">Publish to Cloud</button>
+      <button class="ghost" id="changeCode">Change Admin Code</button>
       <button class="ghost" id="exportJson">Export JSON</button>
       <button class="ghost" id="exportIcs">Export ICS</button>
       <button class="warn" id="resetForm">Reset Form</button>
@@ -162,12 +163,12 @@
 <script>
   // 1) Paste your Firebase config here
   const firebaseConfig = {
-  apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
-  authDomain: "basic-calendar-6404a.firebaseapp.com",
-  projectId: "basic-calendar-6404a",
-  storageBucket: "basic-calendar-6404a.firebasestorage.app",
-  messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
+    apiKey: "PASTE_HERE",
+    authDomain: "PASTE_HERE",
+    projectId: "PASTE_HERE",
+    storageBucket: "PASTE_HERE",
+    messagingSenderId: "PASTE_HERE",
+    appId: "PASTE_HERE"
   };
 
   // 2) Initialize Firebase
@@ -313,11 +314,33 @@
     a.download='events.ics'; a.click();
   };
 
-  document.getElementById('publish').onclick=async()=>{
-    if(!EVENTS.length){ alert('No events to publish'); return; }
-    if(!ensureAdminCode()){ alert('Admin code is required to publish.'); return; }
+  document.getElementById('changeCode').onclick = () => {
+    sessionStorage.removeItem('BASIC_ADMIN_CODE');
+    ADMIN_CODE = '';
+    alert('Admin code cleared. Click “Publish to Cloud” and enter the new code.');
+  };
 
-    const payload={ events: EVENTS, updated: Date.now(), adminCode: ADMIN_CODE };
+  document.getElementById('publish'.onclick = async () => {
+    if (!EVENTS.length) { alert('No events to publish'); return; }
+    if (!ensureAdminCode()) { alert('Admin code is required to publish.'); return; }
+
+    const payload = { events: EVENTS, updated: Date.now(), adminCode: ADMIN_CODE };
+
+    try {
+      await COL.doc('live').set(payload);
+      alert('Published! The public calendar will refresh automatically.');
+    } catch (err) {
+      console.error(err);
+      if (err.code === 'permission-denied') {
+        // Wrong admin code most likely; clear and prompt again next time
+        sessionStorage.removeItem('BASIC_ADMIN_CODE');
+        ADMIN_CODE = '';
+        alert('Admin code was rejected. Click “Publish to Cloud” and re-enter the correct code.');
+      } else {
+        alert('Publish failed. Check Firebase config & rules, then try again.');
+      }
+    }
+  };
     try{
       await COL.doc('live').set(payload);
       alert('Published! The public calendar will refresh automatically.');
