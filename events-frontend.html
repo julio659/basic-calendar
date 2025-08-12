@@ -42,7 +42,7 @@
   .mini{color:var(--muted);font-size:13px}
   .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
 
-  /* Clamp long preview descriptions in cards */
+  /* Clamp long preview descriptions */
   .clamp{
     position:relative;
     display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical;
@@ -68,14 +68,9 @@
   .actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
   .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
 
-  /* “More” menu becomes a fixed popover (so it never clips) */
-  .menu{position:relative}
-  .menu button{border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer}
-  .menu button:hover{box-shadow:0 8px 16px rgba(15,23,42,.08)}
-
+  /* Popover for “More” (fixed so it never clips) */
   .popover{
-    position:fixed; /* key change */
-    min-width:240px; max-width:320px; z-index:2000;
+    position:fixed; min-width:240px; max-width:320px; z-index:2000;
     background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 18px 36px rgba(2,8,23,.18);
     padding:8px; display:none;
   }
@@ -108,9 +103,7 @@
         <button class="btn icon" id="nextMonth" title="Next month">▶</button>
         <button class="btn" id="todayBtn" title="Jump to today">Today</button>
       </div>
-
       <div style="flex:1"></div>
-
       <select id="filter" aria-label="Filter by category"><option value="">All categories</option></select>
       <input id="search" placeholder="Search (fuzzy, all dates)…" aria-label="Search events"/>
     </div>
@@ -120,9 +113,8 @@
 
 <div class="wrap" id="content" aria-live="polite"></div>
 
-<!-- Toast -->
+<!-- Toast & Popover roots -->
 <div class="toast" id="toast">Link copied</div>
-<!-- Floating popover root -->
 <div class="popover" id="popover"></div>
 
 <!-- Modal -->
@@ -138,24 +130,22 @@
       <p id="mDesc" style="margin-top:12px"></p>
       <div class="mini" id="mWhere"></div>
       <div id="mVideo" style="margin-top:12px"></div>
-
       <div class="actions" id="mActions" style="display:none">
         <a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a>
-        <div class="menu" id="moreMenu" style="display:none">
-          <button type="button" id="moreBtn">More ▾</button>
-          <!-- items render into #popover (fixed) -->
-        </div>
+        <button class="btn" id="moreBtn" style="display:none">More ▾</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Firebase -->
+<!-- Firebase (must load BEFORE our app script) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Fuse.js -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+
 <script>
-  // Your Firebase config
+  /* ---------------- Firebase init ---------------- */
   const firebaseConfig = {
     apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
     authDomain: "basic-calendar-6404a.firebaseapp.com",
@@ -165,42 +155,63 @@
     appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
   };
   firebase.initializeApp(firebaseConfig);
-  const db=firebase.firestore();
+  const db = firebase.firestore();
 
   function subscribeEvents(cb){
-    return db.collection('basic_calendar').doc('live').onSnapshot(snap=>{
-      const data=snap.exists? snap.data(): {events:[], updated:null};
-      cb(data.events||[], data.updated||null);
-    }, err=>{
-      console.error('onSnapshot error', err);
-      cb([], null);
-    });
+    const statusBar = document.getElementById('status');
+    return db.collection('basic_calendar').doc('live').onSnapshot(
+      snap => {
+        const data = snap.exists ? snap.data() : { events: [], updated: null };
+        cb(data.events || [], data.updated || null);
+        const when = data.updated ? new Date(data.updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+        statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
+      },
+      err => {
+        console.error('Firestore listener error:', err);
+        const msg = err && err.code === 'permission-denied'
+          ? 'Connection error: Firestore rules block reads on basic_calendar/live.'
+          : `Connection error: ${err?.message || 'unknown'}`;
+        document.getElementById('status').textContent = msg;
+      }
+    );
   }
 
+  /* ---------------- DOM refs & state ---------------- */
   const content=document.getElementById('content');
   const filterSel=document.getElementById('filter');
   const searchInput=document.getElementById('search');
-  const statusBar=document.getElementById('status');
   const pivotInput=document.getElementById('pivot');
   const prevMonthBtn=document.getElementById('prevMonth');
   const nextMonthBtn=document.getElementById('nextMonth');
   const todayBtn=document.getElementById('todayBtn');
-
   const toastEl=document.getElementById('toast');
   const popover=document.getElementById('popover');
+  const modal=document.getElementById('modal');
+  const mActions=document.getElementById('mActions');
+  const mRsvp=document.getElementById('mRsvp');
+  const moreBtn=document.getElementById('moreBtn');
 
   let EVENTS=[]; 
   let CURRENT_LIST=[];
   let FOCUS_BEFORE=null;
   let PIVOT = startOfDay(new Date());
 
+  /* ---------------- Utilities ---------------- */
   function showToast(text, linkHref){
     toastEl.innerHTML = linkHref ? `${text} <a href="${linkHref}" target="_blank" rel="noopener">Open</a>` : text;
     toastEl.classList.add('show');
     clearTimeout(showToast._t);
     showToast._t = setTimeout(()=>toastEl.classList.remove('show'), 2600);
   }
+  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+  function toDateInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+  function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
+  function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
+  function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
+  function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
+  function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
 
+  /* ---------------- Pivot & controls ---------------- */
   function setPivot(d){
     PIVOT = startOfDay(d);
     pivotInput.value = toDateInput(PIVOT);
@@ -209,14 +220,12 @@
     u.searchParams.set('d', toDateInput(PIVOT));
     history.replaceState(null,'',u.toString());
   }
-  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
-  function toDateInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
-
   pivotInput.onchange=()=>{ if(pivotInput.value){ setPivot(new Date(pivotInput.value)); } };
   prevMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()-1, PIVOT.getDate()); setPivot(d); };
   nextMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()+1, PIVOT.getDate()); setPivot(d); };
   todayBtn.onclick=()=> setPivot(new Date());
 
+  /* ---------------- Live data ---------------- */
   subscribeEvents((evs, updated)=>{
     EVENTS = evs;
     buildFilters();
@@ -226,9 +235,6 @@
     if(d && !pivotInput.value){ setPivot(new Date(d)); } else if(!pivotInput.value){ setPivot(new Date()); }
 
     render();
-
-    const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
-    statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
 
     const id = qs.get('e') || qs.get('event');
     if (id) {
@@ -247,12 +253,7 @@
   }
   filterSel.onchange=render; searchInput.oninput=render;
 
-  function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
-  function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
-  function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
-  function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
-  function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
-
+  /* ---------------- Data selection ---------------- */
   function activeEvents(scope){
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
@@ -320,13 +321,7 @@
     return k; 
   }
 
-  /* ---------------- Modal & “More” popover ---------------- */
-  const modal=document.getElementById('modal');
-  const mActions=document.getElementById('mActions');
-  const mRsvp=document.getElementById('mRsvp');
-  const moreMenu=document.getElementById('moreMenu');
-  const moreBtn=document.getElementById('moreBtn');
-
+  /* ---------------- Modal & Popover ---------------- */
   function openModal(e, list){
     CURRENT_LIST = list || activeEvents('all');
     FOCUS_BEFORE = document.activeElement;
@@ -342,14 +337,10 @@
 
     const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
 
-    // RSVP primary
-    if(e.rsvp){ mRsvp.href=e.rsvp; mRsvp.style.display='inline-flex'; } else { mRsvp.style.display='none'; }
-
-    // Build popover content (instead of clipped dropdown)
+    // Actions
     const items=[];
-    if(e.location && e.location.trim()){
-      items.push(popLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
-    }
+    if(e.rsvp){ const a=document.getElementById('mRsvp'); a.href=e.rsvp; a.style.display='inline-flex'; } else { document.getElementById('mRsvp').style.display='none'; }
+    if(e.location && e.location.trim()) items.push(popLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
     items.push(popLink('Add to Google Calendar', googleCalLink(e)));
     const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); const icsUrl=URL.createObjectURL(icsBlob);
     items.push(popLink('Download ICS', icsUrl, true, (e.title||'event')+'.ics'));
@@ -366,15 +357,11 @@
     items.push(shareBtn);
     (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(popLink(label, href)); });
 
-    // Show/hide More button
-    moreMenu.style.display = items.length ? 'inline-block' : 'none';
-    mActions.style.display = (e.rsvp || items.length) ? 'flex' : 'none';
+    const hasMenu = items.length>0;
+    moreBtn.style.display = hasMenu ? 'inline-block' : 'none';
+    mActions.style.display = (e.rsvp || hasMenu) ? 'flex' : 'none';
 
-    // Wire button to show fixed popover
-    moreBtn.onclick=(ev)=>{
-      ev.stopPropagation();
-      renderPopover(ev.currentTarget, items);
-    };
+    moreBtn.onclick=(ev)=>{ ev.stopPropagation(); renderPopover(ev.currentTarget, items); };
     document.addEventListener('click', onDocClick);
     function onDocClick(ev){ if(popover && !popover.contains(ev.target)) hidePopover(); }
     modal._onDocClick = onDocClick;
@@ -392,12 +379,9 @@
     document.getElementById('modalContent').focus();
     document.body.style.overflow='hidden';
 
-    // Keyboard nav
     window.addEventListener('keydown', onKey);
     function onKey(ev){
-      if(ev.key==='Escape'){ 
-        if(popover.classList.contains('open')) hidePopover(); else closeModal(); 
-      }
+      if(ev.key==='Escape'){ if(popover.classList.contains('open')) hidePopover(); else closeModal(); }
       if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
         const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
         if(idx>-1){
@@ -414,9 +398,7 @@
     hidePopover();
     modal.style.display='none';
     document.body.style.overflow='';
-    const u=new URL(location.href);
-    u.searchParams.delete('e');
-    history.replaceState(null,'',u.toString());
+    const u=new URL(location.href); u.searchParams.delete('e'); history.replaceState(null,'',u.toString());
     if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
     if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
     if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
@@ -424,26 +406,15 @@
   document.getElementById('close').onclick=closeModal;
   modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
 
-  /* ---------- Fixed popover (never clips) ---------- */
   function renderPopover(anchor, nodes){
-    // populate
-    popover.innerHTML='';
-    nodes.forEach(n=>popover.appendChild(n));
-    // position near anchor using viewport coordinates
-    const r = anchor.getBoundingClientRect();
-    const margin = 8;
-    let top = r.bottom + margin;
-    let left = r.right - 260; // align right-ish
-    // flip up if would go off-screen
-    const height = 8 + nodes.length*44 + 8; // rough
+    popover.innerHTML=''; nodes.forEach(n=>popover.appendChild(n));
+    const r = anchor.getBoundingClientRect(), margin=8, width=260;
+    let top = r.bottom + margin, left = r.right - width;
+    const height = 12 + nodes.length*44;
     if (top + height > window.innerHeight) top = r.top - height - margin;
-    // keep inside sides
-    left = Math.max(8, Math.min(left, window.innerWidth - 260 - 8));
-    popover.style.top = `${top}px`;
-    popover.style.left = `${left}px`;
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+    popover.style.top = `${top}px`; popover.style.left = `${left}px`; popover.style.width=`${width}px`;
     popover.classList.add('open');
-
-    // close on scroll/resize
     window.addEventListener('scroll', hidePopover, {once:true});
     window.addEventListener('resize', hidePopover, {once:true});
   }
@@ -454,7 +425,7 @@
     return a;
   }
 
-  /* ----------- Embeds & calendar helpers ----------- */
+  /* ---------------- Embeds & calendar helpers ---------------- */
   function embedVideo(url){
     if(/youtu\.be|youtube\.com/.test(url)){
       const id=(url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/)||[])[1]||'';
@@ -466,7 +437,6 @@
     }
     return '';
   }
-
   function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
   function googleCalLink(e){
     const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
@@ -489,7 +459,6 @@
     lines.push('END:VEVENT','END:VCALENDAR');
     return lines.join('\n');
   }
-
   function parseAttachment(s){
     if(!s) return {href:'#',label:'Attachment'};
     const parts = s.split('|');
@@ -501,13 +470,11 @@
       return {href:s,label: name? `${name} — ${host}` : host};
     }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
   }
-
   function fuzzyFilter(query, list){
     if(!query.trim()) return list;
     const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
     return fuse.search(query).map(r=>r.item);
   }
-
   function globalRange(events){
     if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
     let min=Infinity, max=0;
@@ -520,6 +487,44 @@
     const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
   }
 
+  /* ---------- REPEAT EXPANSION HELPERS (required) ---------- */
+  function expandRepeats(list, rangeStart, rangeEnd){
+    const out=[]; list.forEach(e=>{
+      if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
+      const rule=parseRRULE(e.rrule); if(!rule.FREQ){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
+      const baseStart=new Date(e.start); const baseEnd=new Date(e.end||e.start);
+      const until = rule.UNTIL? icsToDate(rule.UNTIL): new Date(rangeEnd);
+      const interval = parseInt(rule.INTERVAL||'1',10);
+      const byday = (rule.BYDAY||'').split(',').filter(Boolean);
+      let d=new Date(baseStart);
+      while(d<=rangeEnd && d<=until){
+        if(rule.FREQ==='WEEKLY'){
+          const weekStart=new Date(d);
+          ['SU','MO','TU','WE','TH','FR','SA'].forEach((wd,idx)=>{
+            if(!byday.length || byday.includes(wd)){
+              const occ=new Date(weekStart); occ.setDate(weekStart.getDate()-weekStart.getDay()+idx);
+              occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+              const occEnd=new Date(occ.getTime() + (baseEnd - baseStart));
+              if(occ>=rangeStart && occ<=rangeEnd && occ<=until){ out.push({...e,start:isoLocal(occ),end:isoLocal(occEnd)}); }
+            }
+          });
+          d.setDate(d.getDate()+7*interval);
+        } else if(rule.FREQ==='DAILY'){
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
+          d.setDate(d.getDate()+interval);
+        } else if(rule.FREQ==='MONTHLY'){
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
+          d = new Date(d.getFullYear(), d.getMonth()+interval, d.getDate(), d.getHours(), d.getMinutes());
+        } else if(rule.FREQ==='YEARLY'){
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
+          d = new Date(d.getFullYear()+interval, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes());
+        } else { if(overlaps(e,rangeStart,rangeEnd)) out.push(e); break; }
+      }
+    }); return out;
+  }
   function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
