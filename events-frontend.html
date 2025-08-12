@@ -3,65 +3,49 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Pinboard-First • Blue Theme)</title>
+<title>BASIC Calendar – Pinboard (Date Pivot)</title>
 <style>
   :root{
     --ink:#0f172a; --muted:#475569; --card:#ffffff; --line:#e6ecf5; --chip:#f7faff;
-    --blue1:#e0f2ff; --blue2:#93c5fd; --blue3:#60a5fa; --blue4:#3b82f6; --blue5:#1d4ed8;
+    --blue1:#e0f2ff; --blue2:#93c5fd; --blue3:#60a5fa; --blue4:#3b82f6;
     --shadow:0 10px 30px rgba(2,8,23,.08);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(180deg,#e6f0ff,#dbeafe,#c7ddff);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  body{margin:0;background:transparent;color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   a{color:var(--blue4)}
-  .wrap{max-width:1100px;margin:auto;padding:20px;background:transparent}
+  .wrap{max-width:1100px;margin:auto;padding:16px;background:transparent}
 
+  /* Header bar (semi-frosted, but transparent-friendly) */
   header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.78);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
   h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
-  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   select,input{appearance:none;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
   select:focus,input:focus{outline:none;border-color:var(--blue3);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
+  .status{font-size:12px;color:var(--muted);margin-top:6px}
 
-  /* View buttons */
-  .views button{
-    --g:linear-gradient(90deg,#ffffff,#dbeafe,#bfdbfe);
-    border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;
-    font-weight:700;color:var(--ink);cursor:pointer;transition:transform .08s ease, box-shadow .2s ease, filter .2s;
+  /* Date pivot controls */
+  .datebar{display:flex;align-items:center;gap:8px}
+  .btn{
+    border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);
+    color:#0b1220;border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer;
+    box-shadow:0 6px 12px rgba(15,23,42,.06);transition:transform .08s ease, box-shadow .2s ease
   }
-  .views button:hover{box-shadow:0 6px 18px rgba(15,23,42,.08)}
-  .views button:active{transform:translateY(1px)}
-  .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(96,165,250,.28)}
+  .btn:hover{box-shadow:0 10px 18px rgba(15,23,42,.10)}
+  .btn:active{transform:translateY(1px)}
+  .btn.icon{padding:6px 10px}
 
-  /* Month nav – extra slim, blue/white */
-  .navbtn{
-    border:1px solid var(--line);
-    background:linear-gradient(90deg,#bfdbfe,#60a5fa);
-    color:#0b1220;border-radius:999px;padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer;
-    transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
-  }
-  .navbtn:hover{ box-shadow:0 3px 8px rgba(2,8,23,.12); filter:saturate(1.05); }
-  .navbtn:active{ transform:translateY(1px); }
-  .navbtn:focus{ outline:none; box-shadow:0 0 0 3px rgba(96,165,250,.25); }
-  .monthtitle{font-weight:900;color:#1e293b;font-size:16px}
-
-  .grid{display:grid;gap:16px;background:transparent}
-  .month{grid-template-columns:repeat(7,1fr)}
-
-  .day{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:120px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
-  .day h4{margin:8px 10px;color:var(--muted);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
-
-  .chip{background:var(--chip);border:1px solid var(--line);border-left:4px solid var(--blue4);border-radius:12px;padding:8px 10px;margin:8px;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
-  .chip:hover{box-shadow:0 8px 18px rgba(15,23,42,.08)}
-  .chip:active{transform:translateY(1px)}
-
+  /* Pinboard */
   .pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;background:transparent}
-  .group{grid-column:1/-1;margin:6px 0 2px;color:#0b1220;font-weight:900}
+  .group{grid-column:1/-1;margin:8px 0 0;color:#0b1220;font-weight:900}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
   .card img{width:100%;height:150px;object-fit:cover}
   .card .pad{padding:12px}
   .pill{font-size:12px;background:linear-gradient(90deg,#e0f2ff,#bfdbfe);color:#0a1220;border:0;padding:4px 10px;border-radius:999px;font-weight:800}
+  .mini{color:var(--muted);font-size:13px}
+  .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
 
-  /* Modal: top aligned + safe padding; inner scroll; action bar tidier */
+  /* Modal (top-aligned, scroll inside, compact actions) */
   .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:flex-start;justify-content:center;padding:64px 20px;z-index:1000}
   .modal .window{
     max-width:760px;width:100%;background:#fff;color:var(--ink);
@@ -71,20 +55,15 @@
   .window header{background:linear-gradient(180deg,#ffffff,#f8fbff);border-bottom:1px solid var(--line);z-index:1;padding:12px 16px}
   .window .content{padding:16px; overflow:auto}
   .close{float:right;background:transparent;border:0;color:var(--ink);font-size:28px;cursor:pointer}
-  .mini{color:var(--muted);font-size:13px}
 
-  /* Primary action + compact "More" menu */
+  /* Primary RSVP + “More” menu to avoid crowding */
   .actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid var(--line);
-       background:linear-gradient(90deg,#ffffff,#eef6ff);color:#0b1220;box-shadow:0 8px 16px rgba(15,23,42,.06);transition:transform .08s ease, box-shadow .2s ease}
-  .btn:hover{box-shadow:0 12px 22px rgba(15,23,42,.12)}
-  .btn:active{transform:translateY(1px)}
   .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
   .menu{position:relative}
-  .menu button{border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);border-radius:999px;padding:10px 12px;font-weight:800;cursor:pointer}
+  .menu button{border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer}
   .menu button:hover{box-shadow:0 8px 16px rgba(15,23,42,.08)}
   .menu .list{
-    position:absolute; top:100%; right:0; margin-top:8px; min-width:220px;
+    position:absolute; top:100%; right:0; margin-top:8px; min-width:240px;
     background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 18px 36px rgba(2,8,23,.18);
     display:none; padding:8px;
   }
@@ -93,9 +72,6 @@
     display:block; width:100%; text-align:left; border:0; background:transparent; padding:10px 10px; border-radius:10px; cursor:pointer; color:var(--ink);
   }
   .menu .list a:hover, .menu .list button:hover{background:#f3f7ff}
-
-  .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
-  .status{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
@@ -103,18 +79,23 @@
   <div class="wrap">
     <h1>Community Calendar</h1>
     <div class="controls">
-      <div class="views" role="tablist" aria-label="Calendar view">
-        <button data-view="pinboard" class="active" role="tab" aria-selected="true">Pinboard</button>
-        <button data-view="month" role="tab" aria-selected="false">Month</button>
+      <!-- Date pivot controls (Tockify-like behavior) -->
+      <div class="datebar" aria-label="Choose start date">
+        <button class="btn icon" id="prevMonth" title="Previous month">◀</button>
+        <input type="date" id="pivot" />
+        <button class="btn icon" id="nextMonth" title="Next month">▶</button>
+        <button class="btn" id="todayBtn" title="Jump to today">Today</button>
       </div>
-      <div style="margin-left:auto"></div>
-      <input type="month" id="jump" aria-label="Jump to month" />
+
+      <div style="flex:1"></div>
+
       <select id="filter" aria-label="Filter by category"><option value="">All categories</option></select>
-      <input id="search" placeholder="Search all months… (fuzzy)" aria-label="Search events"/>
+      <input id="search" placeholder="Search (fuzzy, all dates)…" aria-label="Search events"/>
     </div>
     <div class="status" id="status">Connecting…</div>
   </div>
 </header>
+
 <div class="wrap" id="content" aria-live="polite"></div>
 
 <!-- Modal -->
@@ -130,13 +111,13 @@
       <p id="mDesc" style="margin-top:12px"></p>
       <div class="mini" id="mWhere"></div>
       <div id="mVideo" style="margin-top:12px"></div>
+
+      <!-- Actions: primary RSVP + compact More menu -->
       <div class="actions" id="mActions" style="display:none">
         <a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a>
         <div class="menu" id="moreMenu" style="display:none">
           <button type="button" id="moreBtn">More ▾</button>
-          <div class="list" id="moreList">
-            <!-- dynamic items -->
-          </div>
+          <div class="list" id="moreList"></div>
         </div>
       </div>
     </div>
@@ -146,10 +127,10 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<!-- Fuzzy search (Fuse.js) -->
+<!-- Fuzzy search -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
-  // Your Firebase config (as requested)
+  // Your Firebase config (as provided)
   const firebaseConfig = {
     apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
     authDomain: "basic-calendar-6404a.firebaseapp.com",
@@ -161,6 +142,7 @@
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
+  // Realtime subscription
   function subscribeEvents(cb){
     return db.collection('basic_calendar').doc('live').onSnapshot(snap=>{
       const data=snap.exists? snap.data(): {events:[], updated:null};
@@ -174,24 +156,46 @@
   const content=document.getElementById('content');
   const filterSel=document.getElementById('filter');
   const searchInput=document.getElementById('search');
-  const jumpInput=document.getElementById('jump');
-  const modal=document.getElementById('modal');
   const statusBar=document.getElementById('status');
+  const pivotInput=document.getElementById('pivot');
+  const prevMonthBtn=document.getElementById('prevMonth');
+  const nextMonthBtn=document.getElementById('nextMonth');
+  const todayBtn=document.getElementById('todayBtn');
 
   let EVENTS=[]; 
-  let CUR=new Date(); 
-  let VIEW='pinboard';
-  let CURRENT_LIST=[];
+  let CURRENT_LIST=[];   // for modal keyboard nav
   let FOCUS_BEFORE=null;
+  let PIVOT = startOfDay(new Date()); // default
 
+  // Initialize pivot UI (and support deep-link ?date=YYYY-MM-DD)
+  function setPivot(d){
+    PIVOT = startOfDay(d);
+    pivotInput.value = toDateInput(PIVOT);
+    render();
+    // update deep link (preserves ?event if present)
+    const u=new URL(location.href); u.searchParams.set('date', toDateInput(PIVOT)); history.replaceState(null,'',u.toString());
+  }
+  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+  function toDateInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+
+  // Wire date controls
+  pivotInput.onchange=()=>{ if(pivotInput.value){ setPivot(new Date(pivotInput.value)); } };
+  prevMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()-1, PIVOT.getDate()); setPivot(d); };
+  nextMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()+1, PIVOT.getDate()); setPivot(d); };
+  todayBtn.onclick=()=> setPivot(new Date());
+
+  // Live data
   subscribeEvents((evs, updated)=>{
     EVENTS = evs;
     buildFilters();
+    // set pivot from URL once on load (if provided), else today
+    const qs = new URLSearchParams(location.search);
+    const d = qs.get('date'); if(d && !pivotInput.value){ setPivot(new Date(d)); } else if(!pivotInput.value){ setPivot(new Date()); }
     render();
     const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
     statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
-    // deep link
-    const id = new URLSearchParams(location.search).get('event');
+    // Deep link event
+    const id = qs.get('event');
     if (id) {
       const list = activeEvents('all'); 
       const match = list.find(x=> (x.id||'') === id);
@@ -206,28 +210,29 @@
     cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;filterSel.appendChild(o);});
     filterSel.value = keep && cats.includes(keep) ? keep : '';
   }
-
-  document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{
-    document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active'); VIEW=btn.dataset.view; render();
-  });
-  jumpInput.onchange=()=>{const [y,m]=jumpInput.value.split('-').map(Number); if(y&&m){CUR=new Date(y,m-1,1); render();}};
   filterSel.onchange=render; searchInput.oninput=render;
 
+  // Helpers
   function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
+  function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
+  function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
+  function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
+  function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
 
+  // Active list (Tockify-like: from PIVOT forward), or global for search
   function activeEvents(scope){
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
 
-    if (scope==='all') {
+    if (scope==='all'){
       const [start,end]=globalRange(EVENTS);
       let list=expandRepeats(EVENTS, start, end);
       if(cat) list=list.filter(e=>(e.category||'')===cat);
-      if(q){ list = fuzzyFilter(q, list); }
+      if(q) list = fuzzyFilter(q, list);
       return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
     }
 
+    // Search always scans globally so folks can find far-off events
     if(q){
       const [start,end]=globalRange(EVENTS);
       let list=expandRepeats(EVENTS, start, end);
@@ -236,49 +241,23 @@
       return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
     }
 
-    if (VIEW === 'pinboard') {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const future = new Date(Date.now() + 3*365*864e5);
-      let list = expandRepeats(EVENTS, today, future);
-      if(cat) list = list.filter(e => (e.category||'') === cat);
-      return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
-    }
-
-    const monthStart=new Date(CUR.getFullYear(),CUR.getMonth(),1);
-    const monthEnd=new Date(CUR.getFullYear(),CUR.getMonth()+1,0,23,59);
-    let list=expandRepeats(EVENTS, monthStart, monthEnd);
+    // Default: from pivot forward (up to ~3y)
+    const endCap = new Date(PIVOT.getFullYear()+3, PIVOT.getMonth(), PIVOT.getDate());
+    let list=expandRepeats(EVENTS, PIVOT, endCap);
     if(cat) list=list.filter(e=>(e.category||'')===cat);
     return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
   }
 
-  function render(){ if(VIEW==='month') renderMonth(); else renderPinboard(); }
+  function render(){ renderPinboard(); }
 
-  function renderMonth(){
-    const start=new Date(CUR.getFullYear(),CUR.getMonth(),1);
-    const first=new Date(start); first.setDate(1-first.getDay());
-    const days=[]; for(let i=0;i<42;i++){const d=new Date(first); d.setDate(first.getDate()+i); days.push(d);}
-    const grid=document.createElement('div'); grid.className='grid month';
-    const list=activeEvents();
-    days.forEach(d=>{
-      const cell=document.createElement('div'); cell.className='day';
-      const h=document.createElement('h4'); h.textContent=d.toLocaleDateString([], {day:'numeric', weekday:'short'}); cell.appendChild(h);
-      list.filter(e=>sameDay(new Date(e.start),d)).forEach(e=>cell.appendChild(chip(e)));
-      grid.appendChild(cell);
-    });
-    content.innerHTML='';
-    content.appendChild(navBar());
-    content.appendChild(list.length? grid : emptyState());
-  }
-
-  // Pinboard with simple grouping headers
+  // Pinboard with group headers relative to pivot
   function renderPinboard(){ 
     const list=activeEvents(); 
     CURRENT_LIST = list.slice();
     const grid=document.createElement('div'); grid.className='pinboard'; 
 
-    const now=new Date(); now.setHours(0,0,0,0);
-    const in7=new Date(now); in7.setDate(now.getDate()+7);
-    const in60 = new Date(now); in60.setDate(now.getDate()+60);
+    const in7=new Date(PIVOT); in7.setDate(PIVOT.getDate()+7);
+    const in60 = new Date(PIVOT); in60.setDate(PIVOT.getDate()+60);
 
     const buckets = [
       {label:'This week', test:e=>new Date(e.start)<=in7},
@@ -299,25 +278,8 @@
     content.appendChild(list.length? grid : emptyState()); 
   }
 
-  function emptyState(){ const d=document.createElement('div'); d.className='no-results'; d.textContent='No events found for this view/search.'; return d; }
+  function emptyState(){ const d=document.createElement('div'); d.className='no-results'; d.textContent='No events found for this date/search.'; return d; }
 
-  function navBar(){
-    const row=document.createElement('div'); row.className='controls'; row.style.margin='6px 0 8px';
-    const prev=navBtn('◀',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()-1,1);render();});
-    const title=document.createElement('strong'); title.className='monthtitle'; title.style.margin='0 8px'; title.textContent=CUR.toLocaleString([], {month:'long', year:'numeric'});
-    const next=navBtn('▶',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()+1,1);render();});
-    row.append(prev,title,next); return row;
-  }
-  function navBtn(t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; b.className='navbtn'; return b; }
-
-  function chip(e){ 
-    const c=document.createElement('div'); c.className='chip'; 
-    const t=document.createElement('div'); t.innerHTML=`<strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span>`; 
-    c.appendChild(t); 
-    const tm=document.createElement('div'); tm.className='mini'; tm.textContent=formatRange(e.start,e.end||e.start); c.appendChild(tm);
-    c.onclick=()=>openModal(e, CURRENT_LIST); 
-    return c; 
-  }
   function card(e){ 
     const k=document.createElement('article'); k.className='card'; 
     const img=document.createElement('img'); img.loading='lazy'; img.src=e.image||placeholder(e.title); k.appendChild(img); 
@@ -330,12 +292,181 @@
     return k; 
   }
 
-  function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
-  function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
-  function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
-  function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
+  // ----- Modal & actions (More menu keeps things tidy)
+  const modal=document.getElementById('modal');
+  const mActions=document.getElementById('mActions');
+  const mRsvp=document.getElementById('mRsvp');
+  const moreMenu=document.getElementById('moreMenu');
+  const moreBtn=document.getElementById('moreBtn');
+  const moreList=document.getElementById('moreList');
 
-  // --- Repeat expansion using LOCAL time ---
+  function openModal(e, list){
+    CURRENT_LIST = list || activeEvents('all');
+    FOCUS_BEFORE = document.activeElement;
+
+    document.getElementById('mTitle').textContent=e.title;
+    document.getElementById('mWhen').textContent=formatRange(e.start,e.end||e.start);
+
+    const img=document.getElementById('mImg');
+    if(e.image){ img.src=e.image; img.style.display='block'; } else img.style.display='none';
+
+    document.getElementById('mDesc').textContent=e.description||'';
+    document.getElementById('mWhere').textContent=e.location||'';
+
+    const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
+
+    // Primary RSVP
+    if(e.rsvp){ mRsvp.href=e.rsvp; mRsvp.style.display='inline-flex'; } else { mRsvp.style.display='none'; }
+
+    // Build More menu
+    moreList.innerHTML=''; moreMenu.classList.remove('open'); 
+    const items=[];
+
+    // Map
+    if(e.location && e.location.trim()){
+      items.push(menuLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
+    }
+    // Google Calendar
+    items.push(menuLink('Add to Google Calendar', googleCalLink(e)));
+    // ICS
+    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); const icsUrl=URL.createObjectURL(icsBlob);
+    items.push(menuLink('Download ICS', icsUrl, true, (e.title||'event')+'.ics'));
+    // Share link
+    const shareBtn=document.createElement('button'); shareBtn.textContent='Copy share link';
+    shareBtn.onclick=async ()=>{
+      const url=new URL(location.href);
+      if(e.id) url.searchParams.set('event', e.id);
+      url.searchParams.set('date', toDateInput(PIVOT));
+      const link=url.toString();
+      try{ await navigator.clipboard.writeText(link); shareBtn.textContent='Copied!'; setTimeout(()=>shareBtn.textContent='Copy share link',1200); }
+      catch{ window.prompt('Copy this link:', link); }
+    };
+    items.push(shareBtn);
+    // Attachments
+    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(menuLink(label, href)); });
+
+    items.forEach(n=>moreList.appendChild(n));
+    moreMenu.style.display = items.length ? 'inline-block' : 'none';
+    mActions.style.display = (e.rsvp || items.length) ? 'flex' : 'none';
+
+    // Update URL deep link for current event+pivot
+    if(e.id){ const u=new URL(location.href); u.searchParams.set('event', e.id); u.searchParams.set('date', toDateInput(PIVOT)); history.replaceState(null,'',u.toString()); }
+
+    modal.style.display='flex';
+    document.getElementById('modalContent').focus();
+    document.body.style.overflow='hidden';
+
+    // Toggle menu
+    moreBtn.onclick=(ev)=>{ ev.stopPropagation(); moreMenu.classList.toggle('open'); };
+    document.addEventListener('click', onDocClick);
+    function onDocClick(ev){ if(!moreMenu.contains(ev.target)) moreMenu.classList.remove('open'); }
+    modal._onDocClick = onDocClick;
+
+    // Keyboard nav
+    window.addEventListener('keydown', onKey);
+    function onKey(ev){
+      if(ev.key==='Escape'){ closeModal(); }
+      if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
+        const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
+        if(idx>-1){
+          ev.preventDefault();
+          const nextIdx = ev.key==='ArrowRight' ? (idx+1)%CURRENT_LIST.length : (idx-1+CURRENT_LIST.length)%CURRENT_LIST.length;
+          openModal(CURRENT_LIST[nextIdx], CURRENT_LIST);
+        }
+      }
+    }
+    modal._onKey = onKey;
+
+    function menuLink(text, href, download=false, filename=''){
+      const a=document.createElement('a'); a.textContent=text; a.href=href;
+      if(download){ a.download=filename||'download'; } else { a.target='_blank'; a.rel='noopener'; }
+      return a;
+    }
+  }
+
+  function closeModal(){
+    modal.style.display='none';
+    document.body.style.overflow='';
+    const u=new URL(location.href); u.searchParams.delete('event'); history.replaceState(null,'',u.toString());
+    if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
+    if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
+    moreMenu.classList.remove('open');
+    if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
+  }
+  document.getElementById('close').onclick=closeModal;
+  modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
+
+  // Video embeds
+  function embedVideo(url){
+    if(/youtu\.be|youtube\.com/.test(url)){
+      const id=(url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/)||[])[1]||'';
+      return id? `<div style="position:relative;padding-top:56.25%"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`:'';
+    }
+    if(/vimeo\.com/.test(url)){
+      const id=(url.match(/vimeo\.com\/(\d+)/)||[])[1]||'';
+      return id? `<div style="position:relative;padding-top:56.25%"><iframe src="https://player.vimeo.com/video/${id}" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`:'';
+    }
+    return '';
+  }
+
+  // Calendar helpers
+  function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
+  function googleCalLink(e){
+    const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
+    const text='&text='+encodeURIComponent(e.title||'Event');
+    const dates='&dates='+fmtICS(e.start)+'/'+fmtICS(e.end||e.start);
+    const details=e.description? '&details='+encodeURIComponent(e.description):'';
+    const location=e.location? '&location='+encodeURIComponent(e.location):'';
+    return base+text+dates+details+location;
+  }
+  function escapeICS(s){return String(s||'').replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
+  function singleICS(e){
+    const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`,`BEGIN:VEVENT`];
+    lines.push('UID:'+(e.id||('ev_'+Date.now())));
+    lines.push('SUMMARY:'+escapeICS(e.title||''));
+    if(e.description) lines.push('DESCRIPTION:'+escapeICS(e.description));
+    if(e.location) lines.push('LOCATION:'+escapeICS(e.location));
+    if(e.start) lines.push('DTSTART:'+fmtICS(e.start));
+    if(e.end)   lines.push('DTEND:'+fmtICS(e.end||e.start));
+    if(e.rrule) lines.push('RRULE:'+e.rrule);
+    lines.push('END:VEVENT','END:VCALENDAR');
+    return lines.join('\n');
+  }
+
+  // Attachments label
+  function parseAttachment(s){
+    if(!s) return {href:'#',label:'Attachment'};
+    const parts = s.split('|');
+    if(parts.length>1) return {href:parts[0], label:parts.slice(1).join('|')};
+    try{
+      const u=new URL(s);
+      const name=(u.pathname.split('/').pop()||'').replace(/[-_]/g,' ').replace(/\.[a-z0-9]+$/i,'');
+      const host=u.hostname.replace(/^www\./,'');
+      return {href:s,label: name? `${name} — ${host}` : host};
+    }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
+  }
+
+  // Fuzzy search
+  function fuzzyFilter(query, list){
+    if(!query.trim()) return list;
+    const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
+    return fuse.search(query).map(r=>r.item);
+  }
+
+  // Global search window for repeats
+  function globalRange(events){
+    if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
+    let min=Infinity, max=0;
+    events.forEach(e=>{
+      const s=+new Date(e.start||Date.now()); if(s<min) min=s;
+      let m=s; const r=parseRRULE(e.rrule||'');
+      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; }
+      if(m>max) max=m;
+    });
+    const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
+  }
+
+  // Repeat expansion (local time)
   function expandRepeats(list, rangeStart, rangeEnd){
     const out=[]; list.forEach(e=>{
       if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
@@ -373,175 +504,6 @@
       }
     }); return out;
   }
-  function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
-  function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
-  function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
-
-  // ---------- Modal, deep links, add-to-cal, map, share ----------
-  function openModal(e, list){
-    CURRENT_LIST = list || activeEvents(); 
-    FOCUS_BEFORE = document.activeElement;
-
-    document.getElementById('mTitle').textContent=e.title;
-    document.getElementById('mWhen').textContent=formatRange(e.start,e.end||e.start);
-
-    const img=document.getElementById('mImg');
-    if(e.image){ img.src=e.image; img.style.display='block'; } else img.style.display='none';
-
-    document.getElementById('mDesc').textContent=e.description||'';
-    document.getElementById('mWhere').textContent=e.location||'';
-
-    const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
-
-    const actions=document.getElementById('mActions'); 
-    const rsvp=document.getElementById('mRsvp');
-    const menu=document.getElementById('moreMenu');
-    const listBox=document.getElementById('moreList');
-    actions.style.display='flex'; listBox.innerHTML=''; menu.classList.remove('open');
-
-    // RSVP primary
-    if(e.rsvp){ rsvp.href=e.rsvp; rsvp.style.display='inline-flex'; } else { rsvp.style.display='none'; }
-
-    // Build "More" menu items
-    const items=[];
-
-    // Map
-    if(e.location && e.location.trim()){
-      items.push(elLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
-    }
-    // Google Calendar
-    items.push(elLink('Add to Google Calendar', googleCalLink(e)));
-    // ICS
-    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'});
-    const icsUrl=URL.createObjectURL(icsBlob);
-    items.push(elLink('Download ICS', icsUrl, true));
-    // Copy link
-    const copyBtn=document.createElement('button');
-    copyBtn.textContent='Copy share link';
-    copyBtn.onclick=async ()=>{ 
-      const url=new URL(location.href); if(e.id) url.searchParams.set('event', e.id);
-      try{ await navigator.clipboard.writeText(url.toString()); copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy share link',1200);}catch{ alert(url.toString()); }
-    };
-    items.push(copyBtn);
-    // Attachments
-    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(elLink(label, href)); });
-
-    items.forEach(n=>listBox.appendChild(n));
-    menu.style.display = items.length ? 'inline-block' : 'none';
-
-    // Update deep link in address bar
-    if(e.id){ const u=new URL(location.href); u.searchParams.set('event', e.id); history.replaceState(null,'',u.toString()); }
-
-    modal.style.display='flex';
-    document.getElementById('modalContent').focus();
-    document.body.style.overflow='hidden';
-
-    // Toggle menu
-    document.getElementById('moreBtn').onclick=(ev)=>{ ev.stopPropagation(); menu.classList.toggle('open'); };
-    document.addEventListener('click', onDocClick);
-    function onDocClick(ev){ if(!menu.contains(ev.target)) menu.classList.remove('open'); }
-    modal._onDocClick = onDocClick;
-
-    // Keyboard nav
-    window.addEventListener('keydown', onKey);
-    function onKey(ev){
-      if(ev.key==='Escape'){ closeModal(); }
-      if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
-        const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
-        if(idx>-1){
-          ev.preventDefault();
-          const nextIdx = ev.key==='ArrowRight' ? (idx+1)%CURRENT_LIST.length : (idx-1+CURRENT_LIST.length)%CURRENT_LIST.length;
-          openModal(CURRENT_LIST[nextIdx], CURRENT_LIST);
-        }
-      }
-    }
-    modal._onKey = onKey;
-
-    function elLink(text, href, download){
-      const a=document.createElement('a'); a.textContent=text; a.href=href; a.target=download?'':'_blank'; a.rel=download?'':'noopener';
-      if(download){ a.download=(e.title||'event')+'.ics'; }
-      return a;
-    }
-  }
-
-  function closeModal(){
-    modal.style.display='none';
-    document.body.style.overflow='';
-    const u=new URL(location.href); u.searchParams.delete('event'); history.replaceState(null,'',u.toString());
-    if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
-    if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
-    const menu=document.getElementById('moreMenu'); if(menu) menu.classList.remove('open');
-    if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
-  }
-
-  document.getElementById('close').onclick=closeModal;
-  modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
-
-  function embedVideo(url){
-    if(/youtu\.be|youtube\.com/.test(url)){
-      const id=(url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/)||[])[1]||'';
-      return id? `<div style="position:relative;padding-top:56.25%"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`:'';
-    }
-    if(/vimeo\.com/.test(url)){
-      const id=(url.match(/vimeo\.com\/(\d+)/)||[])[1]||'';
-      return id? `<div style="position:relative;padding-top:56.25%"><iframe src="https://player.vimeo.com/video/${id}" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`:'';
-    }
-    return '';
-  }
-
-  function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
-  function googleCalLink(e){
-    const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
-    const text='&text='+encodeURIComponent(e.title||'Event');
-    const dates='&dates='+fmtICS(e.start)+'/'+fmtICS(e.end||e.start);
-    const details=e.description? '&details='+encodeURIComponent(e.description):'';
-    const location=e.location? '&location='+encodeURIComponent(e.location):'';
-    return base+text+dates+details+location;
-  }
-  function escapeICS(s){return String(s||'').replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
-  function singleICS(e){
-    const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`,`BEGIN:VEVENT`];
-    lines.push('UID:'+(e.id||('ev_'+Date.now())));
-    lines.push('SUMMARY:'+escapeICS(e.title||''));
-    if(e.description) lines.push('DESCRIPTION:'+escapeICS(e.description));
-    if(e.location) lines.push('LOCATION:'+escapeICS(e.location));
-    if(e.start) lines.push('DTSTART:'+fmtICS(e.start));
-    if(e.end)   lines.push('DTEND:'+fmtICS(e.end||e.start));
-    if(e.rrule) lines.push('RRULE:'+e.rrule);
-    lines.push('END:VEVENT','END:VCALENDAR');
-    return lines.join('\n');
-  }
-
-  function parseAttachment(s){
-    if(!s) return {href:'#',label:'Attachment'};
-    const parts = s.split('|');
-    if(parts.length>1) return {href:parts[0], label:parts.slice(1).join('|')};
-    try{
-      const u=new URL(s);
-      const name=(u.pathname.split('/').pop()||'').replace(/[-_]/g,' ').replace(/\.[a-z0-9]+$/i,'');
-      const host=u.hostname.replace(/^www\./,'');
-      return {href:s,label: name? `${name} — ${host}` : host};
-    }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
-  }
-
-  function fuzzyFilter(query, list){
-    if(!query.trim()) return list;
-    const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
-    return fuse.search(query).map(r=>r.item);
-  }
-
-  function globalRange(events){
-    if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
-    let min=Infinity, max=0;
-    events.forEach(e=>{
-      const s=+new Date(e.start||Date.now()); if(s<min) min=s;
-      let m=s; const r=parseRRULE(e.rrule||'');
-      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; }
-      if(m>max) max=m;
-    });
-    const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
-  }
-
   function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
