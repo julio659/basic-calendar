@@ -3,76 +3,46 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Pinboard-First • Blue Theme • Fixed Modal)</title>
+<title>BASIC Calendar – Frontend (Pinboard-First • Blue Theme • Deep Links)</title>
 <style>
-  /* ===== Clean blue/white theme ===== */
   :root{
-    --ink:#0f172a;           /* text */
-    --muted:#475569;         /* secondary text */
-    --card:#ffffff;          /* solid cards/days */
-    --line:#e6ecf5;          /* borders */
-    --chip:#f7faff;          /* event chips bg */
-    --blue1:#e0f2ff;         /* light */
-    --blue2:#93c5fd;         /* soft */
-    --blue3:#60a5fa;         /* mid */
-    --blue4:#3b82f6;         /* brand */
-    --blue5:#1d4ed8;         /* deep */
+    --ink:#0f172a; --muted:#475569; --card:#ffffff; --line:#e6ecf5; --chip:#f7faff;
+    --blue1:#e0f2ff; --blue2:#93c5fd; --blue3:#60a5fa; --blue4:#3b82f6; --blue5:#1d4ed8;
     --shadow:0 10px 30px rgba(2,8,23,.08);
   }
-
   *{box-sizing:border-box}
   body{margin:0;background:transparent;color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   a{color:var(--blue4)}
   .wrap{max-width:1100px;margin:auto;padding:20px;background:transparent}
 
-  /* Light frosted header */
   header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.75);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
   h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
-
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
-  /* Inputs */
   select,input{appearance:none;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
   select:focus,input:focus{outline:none;border-color:var(--blue3);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
 
-  /* View buttons */
   .views button{
     --g:linear-gradient(90deg,#ffffff,#dbeafe,#bfdbfe);
-    border:1px solid var(--line);
-    background:#fff;
-    border-radius:999px;
-    padding:8px 12px;
-    font-weight:700;
-    color:var(--ink);
-    cursor:pointer;
-    transition:transform .08s ease, box-shadow .2s ease, filter .2s;
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;
+    font-weight:700;color:var(--ink);cursor:pointer;transition:transform .08s ease, box-shadow .2s ease, filter .2s;
   }
   .views button:hover{box-shadow:0 6px 18px rgba(15,23,42,.08)}
   .views button:active{transform:translateY(1px)}
-  .views button.active{background:var(--g); color:#0b1220; border-color:transparent; box-shadow:0 8px 22px rgba(96,165,250,.28)}
+  .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(96,165,250,.28)}
 
-  /* Month nav — extra slim blue gradient */
   .navbtn{
-    border:1px solid var(--line);
-    background:linear-gradient(90deg,#bfdbfe,#60a5fa);
-    color:#0b1220;
-    border-radius:999px;
-    padding:4px 10px;
-    font-weight:700;
-    font-size:13px;
-    cursor:pointer;
-    transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
+    border:1px solid var(--line);background:linear-gradient(90deg,#bfdbfe,#60a5fa);color:#0b1220;border-radius:999px;
+    padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
   }
   .navbtn:hover{ box-shadow:0 3px 8px rgba(2,8,23,.12); filter:saturate(1.05); }
   .navbtn:active{ transform:translateY(1px); }
-  .navbtn:focus{ outline: none; box-shadow:0 0 0 3px rgba(96,165,250,.25); }
+  .navbtn:focus{ outline:none; box-shadow:0 0 0 3px rgba(96,165,250,.25); }
   .monthtitle{font-weight:900;color:#1e293b;font-size:16px}
 
-  /* Grid layout – gaps stay transparent */
   .grid{display:grid;gap:16px;background:transparent}
   .month{grid-template-columns:repeat(7,1fr)}
 
-  /* Day cells and cards (solid) */
   .day{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:120px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
   .day h4{margin:8px 10px;color:var(--muted);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
 
@@ -80,35 +50,32 @@
   .chip:hover{box-shadow:0 8px 18px rgba(15,23,42,.08)}
   .chip:active{transform:translateY(1px)}
 
-  .pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;background:transparent}
+  .pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;background:transparent}
+  .group{grid-column:1/-1;margin:6px 0 2px;color:#0b1220;font-weight:900}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
   .card img{width:100%;height:150px;object-fit:cover}
   .card .pad{padding:12px}
   .pill{font-size:12px;background:linear-gradient(90deg,#e0f2ff,#bfdbfe);color:#0a1220;border:0;padding:4px 10px;border-radius:999px;font-weight:800}
 
-  /* Modal (fixed: no clipping, scrolls smoothly) */
-  .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:center;justify-content:center;padding:20px}
+  /* Modal: top aligned + safe padding; inner scroll; focus trap */
+  .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:flex-start;justify-content:center;padding:64px 20px}
   .modal .window{
-    max-width:720px;width:100%;background:#fff;color:var(--ink);
+    max-width:760px;width:100%;background:#fff;color:var(--ink);
     border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);
-    max-height:92vh; display:flex; flex-direction:column; overflow:hidden;
+    max-height:calc(100vh - 128px); display:flex; flex-direction:column; overflow:hidden;
   }
-  .window header{position:sticky;top:0;background:linear-gradient(180deg,#ffffff,#f8fbff);border-bottom:1px solid var(--line);z-index:1;padding:12px 16px}
+  .window header{background:linear-gradient(180deg,#ffffff,#f8fbff);border-bottom:1px solid var(--line);z-index:1;padding:12px 16px}
   .window .content{padding:16px; overflow:auto}
   .close{float:right;background:transparent;border:0;color:var(--ink);font-size:28px;cursor:pointer}
   .mini{color:var(--muted);font-size:13px}
 
-  /* Action buttons row (RSVP + attachments together) */
-  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
-  .btn{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:800;
-    border:1px solid var(--line); background:linear-gradient(90deg,#ffffff,#eef6ff);
-    color:#0b1220; box-shadow:0 8px 16px rgba(15,23,42,.06); transition:transform .08s ease, box-shadow .2s ease;
-  }
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid var(--line);
+       background:linear-gradient(90deg,#ffffff,#eef6ff);color:#0b1220;box-shadow:0 8px 16px rgba(15,23,42,.06);transition:transform .08s ease, box-shadow .2s ease}
   .btn:hover{box-shadow:0 12px 22px rgba(15,23,42,.12)}
   .btn:active{transform:translateY(1px)}
-  .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd); border-color:transparent}
+  .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
+  .btn.icon{padding:10px 12px}
 
   .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
   .status{font-size:12px;color:var(--muted);margin-top:6px}
@@ -119,40 +86,40 @@
   <div class="wrap">
     <h1>Community Calendar</h1>
     <div class="controls">
-      <div class="views">
-        <button data-view="pinboard" class="active">Pinboard</button>
-        <button data-view="month">Month</button>
+      <div class="views" role="tablist" aria-label="Calendar view">
+        <button data-view="pinboard" class="active" role="tab" aria-selected="true">Pinboard</button>
+        <button data-view="month" role="tab" aria-selected="false">Month</button>
       </div>
       <div style="margin-left:auto"></div>
-      <input type="month" id="jump" />
-      <select id="filter"><option value="">All categories</option></select>
-      <input id="search" placeholder="Search all months… (fuzzy)"/>
+      <input type="month" id="jump" aria-label="Jump to month" />
+      <select id="filter" aria-label="Filter by category"><option value="">All categories</option></select>
+      <input id="search" placeholder="Search all months… (fuzzy)" aria-label="Search events"/>
     </div>
     <div class="status" id="status">Connecting…</div>
   </div>
 </header>
-<div class="wrap" id="content"></div>
+<div class="wrap" id="content" aria-live="polite"></div>
 
 <!-- Modal -->
-<div class="modal" id="modal">
+<div class="modal" id="modal" aria-modal="true" role="dialog" aria-labelledby="mTitle">
   <div class="window">
     <header>
-      <button class="close" id="close">×</button>
+      <button class="close" id="close" aria-label="Close">×</button>
       <h3 id="mTitle" style="margin:0"></h3>
       <div class="mini" id="mWhen"></div>
     </header>
-    <div class="content">
+    <div class="content" id="modalContent" tabindex="0">
       <img id="mImg" alt="" style="width:100%;max-height:260px;object-fit:cover;display:none;border-radius:12px">
       <p id="mDesc" style="margin-top:12px"></p>
       <div class="mini" id="mWhere"></div>
-
-      <!-- Video keeps 16:9 and scrolls inside content -->
       <div id="mVideo" style="margin-top:12px"></div>
-
-      <!-- Combined actions (RSVP + attachments) -->
       <div class="actions" id="mActions" style="display:none">
         <a class="btn primary" id="mRsvp" target="_blank" rel="noopener">RSVP / Tickets</a>
-        <!-- attachment buttons will be appended here -->
+        <a class="btn icon" id="mMap" target="_blank" rel="noopener" style="display:none">View map</a>
+        <a class="btn icon" id="mGoogle" target="_blank" rel="noopener" style="display:none">Google</a>
+        <a class="btn icon" id="mIcs" download style="display:none">ICS</a>
+        <button class="btn icon" id="mShare" type="button" style="display:none">Copy link</button>
+        <!-- attachment buttons appended here -->
       </div>
     </div>
   </div>
@@ -197,6 +164,8 @@
   let EVENTS=[]; 
   let CUR=new Date(); 
   let VIEW='pinboard';   // default to Pinboard
+  let CURRENT_LIST=[];   // for keyboard navigation
+  let FOCUS_BEFORE=null; // for focus return after modal
 
   subscribeEvents((evs, updated)=>{
     EVENTS = evs;
@@ -204,6 +173,13 @@
     render();
     const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
     statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
+    // deep link
+    const id = new URLSearchParams(location.search).get('event');
+    if (id) {
+      const list = activeEvents('all'); // full range
+      const match = list.find(x=> (x.id||'') === id);
+      if (match) openModal(match, list);
+    }
   });
 
   function buildFilters(){
@@ -222,12 +198,20 @@
   jumpInput.onchange=()=>{const [y,m]=jumpInput.value.split('-').map(Number); if(y&&m){CUR=new Date(y,m-1,1); render();}};
   filterSel.onchange=render; searchInput.oninput=render;
 
-  // Local ISO helper
   function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
 
-  function activeEvents(){
+  function activeEvents(scope){
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
+
+    // all = global window without filtering to future/month
+    if (scope==='all') {
+      const [start,end]=globalRange(EVENTS);
+      let list=expandRepeats(EVENTS, start, end);
+      if(cat) list=list.filter(e=>(e.category||'')===cat);
+      if(q){ list = fuzzyFilter(q, list); }
+      return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
+    }
 
     if(q){
       const [start,end]=globalRange(EVENTS);
@@ -271,10 +255,32 @@
     content.appendChild(list.length? grid : emptyState());
   }
 
+  // Pinboard with grouping: This week / Next month / Later
   function renderPinboard(){ 
     const list=activeEvents(); 
+    CURRENT_LIST = list.slice();
     const grid=document.createElement('div'); grid.className='pinboard'; 
-    list.forEach(e=>grid.appendChild(card(e))); 
+
+    const now=new Date(); now.setHours(0,0,0,0);
+    const in7=new Date(now); in7.setDate(now.getDate()+7);
+    const nextMonth = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    const in60 = new Date(now); in60.setDate(now.getDate()+60);
+
+    const buckets = [
+      {label:'This week', test:e=>new Date(e.start)<=in7},
+      {label:'Next month', test:e=>new Date(e.start)>in7 && new Date(e.start)<in60},
+      {label:'Later', test:e=>new Date(e.start)>=in60},
+    ];
+
+    buckets.forEach(b=>{
+      const items=list.filter(b.test);
+      if(items.length){
+        const h=document.createElement('h3'); h.className='group'; h.textContent=b.label;
+        grid.appendChild(h);
+        items.forEach(e=>grid.appendChild(card(e)));
+      }
+    });
+
     content.innerHTML=''; 
     content.appendChild(list.length? grid : emptyState()); 
   }
@@ -295,18 +301,18 @@
     const t=document.createElement('div'); t.innerHTML=`<strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span>`; 
     c.appendChild(t); 
     const tm=document.createElement('div'); tm.className='mini'; tm.textContent=formatRange(e.start,e.end||e.start); c.appendChild(tm);
-    c.onclick=()=>openModal(e); 
+    c.onclick=()=>openModal(e, CURRENT_LIST); 
     return c; 
   }
   function card(e){ 
     const k=document.createElement('article'); k.className='card'; 
-    const img=document.createElement('img'); img.src=e.image||placeholder(e.title); k.appendChild(img); 
+    const img=document.createElement('img'); img.loading='lazy'; img.src=e.image||placeholder(e.title); k.appendChild(img); 
     const box=document.createElement('div'); box.className='pad'; k.appendChild(box); 
     const h=document.createElement('h3'); h.textContent=e.title; box.appendChild(h); 
     const p=document.createElement('div'); p.className='mini'; p.textContent=formatRange(e.start,e.end||e.start); box.appendChild(p); 
     const cat=document.createElement('span'); cat.className='pill'; cat.textContent=e.category||'General'; box.appendChild(cat); 
     const d=document.createElement('p'); d.textContent=e.description||''; box.appendChild(d); 
-    const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e);}; box.appendChild(a); 
+    const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e, CURRENT_LIST);}; box.appendChild(a); 
     return k; 
   }
 
@@ -357,8 +363,11 @@
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
 
-  // Modal details (with video + labeled attachments now next to RSVP)
-  function openModal(e){
+  // ---------- Modal, deep links, calendar/map/share ----------
+  function openModal(e, list){
+    CURRENT_LIST = list || activeEvents(); // for keyboard nav
+    FOCUS_BEFORE = document.activeElement;
+
     document.getElementById('mTitle').textContent=e.title;
     document.getElementById('mWhen').textContent=formatRange(e.start,e.end||e.start);
 
@@ -368,27 +377,88 @@
     document.getElementById('mDesc').textContent=e.description||'';
     document.getElementById('mWhere').textContent=e.location||'';
 
-    const vid=document.getElementById('mVideo'); 
-    vid.innerHTML=''; 
-    if(e.video){ vid.innerHTML=embedVideo(e.video); }
+    const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
 
-    // Actions row (RSVP + attachments)
+    // Build actions (RSVP, map, add-to-calendar, share, attachments)
     const actions=document.getElementById('mActions'); actions.innerHTML=''; let hasActions=false;
+
+    // RSVP
     if(e.rsvp){ 
-      const r=document.createElement('a'); r.className='btn primary'; r.href=e.rsvp; r.target='_blank'; r.rel='noopener'; r.textContent='RSVP / Tickets';
+      const r=document.createElement('a'); r.className='btn primary'; r.id='mRsvpBtn';
+      r.href=e.rsvp; r.target='_blank'; r.rel='noopener'; r.textContent='RSVP / Tickets';
       actions.appendChild(r); hasActions=true;
     }
+
+    // Map (from location text)
+    if (e.location && e.location.trim()){
+      const map=document.createElement('a'); map.className='btn icon'; map.id='mMapBtn';
+      map.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim());
+      map.target='_blank'; map.rel='noopener'; map.textContent='View map';
+      actions.appendChild(map); hasActions=true;
+    }
+
+    // Add-to-Calendar
+    const g=document.createElement('a'); g.className='btn icon'; g.textContent='Google';
+    g.href=googleCalLink(e); g.target='_blank'; g.rel='noopener'; actions.appendChild(g);
+    const ics=document.createElement('a'); ics.className='btn icon'; ics.textContent='ICS';
+    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); ics.href=URL.createObjectURL(icsBlob); ics.download=(e.title||'event')+'.ics';
+    actions.appendChild(ics); hasActions=true;
+
+    // Share link (?event=ID)
+    if(e.id){
+      const share=document.createElement('button'); share.className='btn icon'; share.textContent='Copy link';
+      share.onclick=async ()=>{
+        const url=new URL(location.href); url.searchParams.set('event', e.id); const link=url.toString();
+        try{ await navigator.clipboard.writeText(link); share.textContent='Copied!'; setTimeout(()=>share.textContent='Copy link',1200);}catch{ alert(link); }
+      };
+      actions.appendChild(share); hasActions=true;
+      // Update address bar for deep link
+      const u=new URL(location.href); u.searchParams.set('event', e.id); history.replaceState(null,'',u.toString());
+    }
+
+    // Attachments
     (e.attachments||[]).forEach(u=>{
       const {href,label}=parseAttachment(u);
-      const a=document.createElement('a'); a.className='btn'; a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=label;
+      const a=document.createElement('a'); a.className='btn icon'; a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=label;
       actions.appendChild(a); hasActions=true;
     });
+
     actions.style.display = hasActions ? 'flex' : 'none';
 
     modal.style.display='flex';
+    document.getElementById('modalContent').focus(); // focus trap start
+    document.body.style.overflow='hidden';
+
+    // Keyboard navigation
+    window.addEventListener('keydown', onKey);
+    function onKey(ev){
+      if(ev.key==='Escape'){ closeModal(); }
+      if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
+        const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
+        if(idx>-1){
+          ev.preventDefault();
+          const nextIdx = ev.key==='ArrowRight' ? (idx+1)%CURRENT_LIST.length : (idx-1+CURRENT_LIST.length)%CURRENT_LIST.length;
+          openModal(CURRENT_LIST[nextIdx], CURRENT_LIST);
+        }
+      }
+    }
+    // store to remove later
+    modal._onKey = onKey;
   }
-  document.getElementById('close').onclick=()=>modal.style.display='none';
-  modal.onclick=(ev)=>{ if(ev.target===modal) modal.style.display='none'; };
+
+  function closeModal(){
+    modal.style.display='none';
+    document.body.style.overflow='';
+    // revert deep link
+    const u=new URL(location.href); u.searchParams.delete('event'); history.replaceState(null,'',u.toString());
+    // remove keyboard handler
+    if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
+    // return focus
+    if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
+  }
+
+  document.getElementById('close').onclick=closeModal;
+  modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
 
   function embedVideo(url){
     if(/youtu\.be|youtube\.com/.test(url)){
@@ -400,6 +470,30 @@
       return id? `<div style="position:relative;padding-top:56.25%"><iframe src="https://player.vimeo.com/video/${id}" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>`:'';
     }
     return '';
+  }
+
+  // Google Calendar link & single ICS
+  function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
+  function googleCalLink(e){
+    const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
+    const text='&text='+encodeURIComponent(e.title||'Event');
+    const dates='&dates='+fmtICS(e.start)+'/'+fmtICS(e.end||e.start);
+    const details=e.description? '&details='+encodeURIComponent(e.description):'';
+    const location=e.location? '&location='+encodeURIComponent(e.location):'';
+    return base+text+dates+details+location;
+  }
+  function escapeICS(s){return String(s||'').replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
+  function singleICS(e){
+    const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`,`BEGIN:VEVENT`];
+    lines.push('UID:'+(e.id||('ev_'+Date.now())));
+    lines.push('SUMMARY:'+escapeICS(e.title||''));
+    if(e.description) lines.push('DESCRIPTION:'+escapeICS(e.description));
+    if(e.location) lines.push('LOCATION:'+escapeICS(e.location));
+    if(e.start) lines.push('DTSTART:'+fmtICS(e.start));
+    if(e.end)   lines.push('DTEND:'+fmtICS(e.end||e.start));
+    if(e.rrule) lines.push('RRULE:'+e.rrule);
+    lines.push('END:VEVENT','END:VCALENDAR');
+    return lines.join('\n');
   }
 
   // Attachment label helper
@@ -422,7 +516,7 @@
     return fuse.search(query).map(r=>r.item);
   }
 
-  // Global search window for repeats
+  // Global search window
   function globalRange(events){
     if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
     let min=Infinity, max=0;
@@ -436,43 +530,6 @@
   }
 
   // Repeat helpers
-  function expandRepeats(list, rangeStart, rangeEnd){
-    const out=[]; list.forEach(e=>{
-      if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
-      const rule=parseRRULE(e.rrule); if(!rule.FREQ){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
-      const baseStart=new Date(e.start); const baseEnd=new Date(e.end||e.start);
-      const until = rule.UNTIL? icsToDate(rule.UNTIL): new Date(rangeEnd);
-      const interval = parseInt(rule.INTERVAL||'1',10);
-      const byday = (rule.BYDAY||'').split(',').filter(Boolean);
-      let d=new Date(baseStart);
-      while(d<=rangeEnd && d<=until){
-        if(rule.FREQ==='WEEKLY'){
-          const weekStart=new Date(d);
-          ['SU','MO','TU','WE','TH','FR','SA'].forEach((wd,idx)=>{
-            if(!byday.length || byday.includes(wd)){
-              const occ=new Date(weekStart); occ.setDate(weekStart.getDate()-weekStart.getDay()+idx);
-              occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-              const occEnd=new Date(occ.getTime() + (baseEnd - baseStart));
-              if(occ>=rangeStart && occ<=rangeEnd && occ<=until){ out.push({...e,start:isoLocal(occ),end:isoLocal(occEnd)}); }
-            }
-          });
-          d.setDate(d.getDate()+7*interval);
-        } else if(rule.FREQ==='DAILY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d.setDate(d.getDate()+interval);
-        } else if(rule.FREQ==='MONTHLY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d = new Date(d.getFullYear(), d.getMonth()+interval, d.getDate(), d.getHours(), d.getMinutes());
-        } else if(rule.FREQ==='YEARLY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d = new Date(d.getFullYear()+interval, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes());
-        } else { if(overlaps(e,rangeStart,rangeEnd)) out.push(e); break; }
-      }
-    }); return out;
-  }
   function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
