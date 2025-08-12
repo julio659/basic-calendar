@@ -88,13 +88,14 @@
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
   // Paste the SAME Firebase config you used in the backend
-  const apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
+  const firebaseConfig = { 
+    
+    apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
   authDomain: "basic-calendar-6404a.firebaseapp.com",
   projectId: "basic-calendar-6404a",
   storageBucket: "basic-calendar-6404a.firebasestorage.app",
   messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
- };
+  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd" };
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
