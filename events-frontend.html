@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Realtime • Bright Theme • Sleek Buttons)</title>
+<title>BASIC Calendar – Frontend (Realtime • Bright Theme • Sleek Nav)</title>
 <style>
   /* ===== Bright / Fun theme tokens ===== */
   :root{
     --ink:#1b2430;            /* primary text */
-    --muted:#5b6b82;          /* secondary text */
+    --muted:#495a73;          /* darker for readability */
     --card:#ffffff;           /* solid cards/days */
     --line:#e6ecf5;           /* borders */
     --chip:#f7faff;           /* event chips bg */
@@ -24,8 +24,8 @@
   a{color:#2563eb}
   .wrap{max-width:1100px;margin:auto;padding:20px;background:transparent}
 
-  /* Frosted, light header that feels native on any page */
-  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.7);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.8)}
+  /* Frosted, light header */
+  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.72);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
   h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
 
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -34,11 +34,17 @@
   select,input{appearance:none;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
   select:focus,input:focus{outline:none;border-color:#b3d6ff;box-shadow:0 0 0 3px rgba(108,194,255,.25)}
 
-  /* Sleek pill buttons with animated gradient */
+  /* Sleek pill view buttons */
   .views button{--g:linear-gradient(90deg,var(--accent2),var(--accent));border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 14px;font-weight:700;color:var(--ink);cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
   .views button:hover{box-shadow:0 6px 18px rgba(99,102,241,.18)}
   .views button:active{transform:translateY(1px)}
   .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(108,194,255,.35)}
+
+  /* Month nav (prev/next) — match the view button style */
+  .navbtn{border:1px solid var(--line);background:linear-gradient(90deg,var(--accent2),var(--accent));color:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
+  .navbtn:hover{box-shadow:0 8px 22px rgba(108,194,255,.28)}
+  .navbtn:active{transform:translateY(1px)}
+  .monthtitle{font-weight:900; color:#213047}
 
   /* Layout grids – gaps are transparent so host page shows through */
   .grid{display:grid;gap:16px;background:transparent}
@@ -70,8 +76,8 @@
   .rsvp{display:inline-block;margin-top:8px;padding:10px 16px;border-radius:999px;background:linear-gradient(90deg,var(--accent2),var(--accent));color:#0a1220;font-weight:900;text-decoration:none;box-shadow:0 10px 20px rgba(108,194,255,.25)}
   .attachments a{display:inline-block;margin:6px 6px 0 0;padding:7px 12px;border:1px solid var(--line);border-radius:999px;transition:background .2s}
   .attachments a:hover{background:#f3f7ff}
-  .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
-  .status{font-size:12px;color:var(--muted);margin-top:6px}
+  .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:#61708a;background:#fff}
+  .status{font-size:12px;color:#5b6b82;margin-top:6px}
 </style>
 </head>
 <body>
@@ -115,12 +121,14 @@
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
   // Paste the SAME Firebase config you used in the backend
-  const firebaseConfig = { apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
+  const firebaseConfig = {
+    apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
   authDomain: "basic-calendar-6404a.firebaseapp.com",
   projectId: "basic-calendar-6404a",
   storageBucket: "basic-calendar-6404a.firebasestorage.app",
   messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd" };
+  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
+  };
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
@@ -143,14 +151,12 @@
   const statusBar=document.getElementById('status');
 
   let EVENTS=[]; let CUR=new Date(); let VIEW='month';
-  let fuse=null; let unsub=null; let lastUpdated=null;
+  let unsub=null;
 
   // Start realtime
   unsub = subscribeEvents((evs, updated)=>{
     EVENTS = evs;
-    lastUpdated = updated;
     buildFilters();
-    initFuzzy(EVENTS);
     render();
     const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
     statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
@@ -165,7 +171,10 @@
   }
 
   // View switching
-  document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');VIEW=btn.dataset.view;render();});
+  document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); VIEW=btn.dataset.view; render();
+  });
   jumpInput.onchange=()=>{const [y,m]=jumpInput.value.split('-').map(Number); if(y&&m){CUR=new Date(y,m-1,1); render();}};
   filterSel.onchange=render; searchInput.oninput=render;
 
@@ -198,17 +207,17 @@
   function renderMonth(){
     const start=new Date(CUR.getFullYear(),CUR.getMonth(),1);
     const first=new Date(start); first.setDate(1-first.getDay()); // Sunday start
-    const days=[]; for(let i=0;i<42;i++){const d=new Date(first); d.setDate(first.getDate()+i); days.push(d);} 
+    const days=[]; for(let i=0;i<42;i++){const d=new Date(first); d.setDate(first.getDate()+i); days.push(d);}
     const grid=document.createElement('div'); grid.className='grid month';
     const list=activeEvents();
     days.forEach(d=>{
       const cell=document.createElement('div'); cell.className='day';
       const h=document.createElement('h4'); h.textContent=d.toLocaleDateString([], {day:'numeric', weekday:'short'}); cell.appendChild(h);
-      if(sameDay(d,new Date())) cell.classList.add('today');
       list.filter(e=>sameDay(new Date(e.start),d)).forEach(e=>cell.appendChild(chip(e)));
       grid.appendChild(cell);
     });
-    content.innerHTML=''; content.appendChild(navBar());
+    content.innerHTML='';
+    content.appendChild(navBar());
     content.appendChild(list.length? grid : emptyState());
   }
 
@@ -217,8 +226,14 @@
 
   function emptyState(){ const d=document.createElement('div'); d.className='no-results'; d.textContent='No events found for this view/search.'; return d; }
 
-  function navBar(){ const row=document.createElement('div'); row.className='controls'; row.style.margin='6px 0 8px'; const prev=btn('◀',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()-1,1);render();}); const title=document.createElement('strong'); title.style.margin='0 8px'; title.textContent=CUR.toLocaleString([], {month:'long', year:'numeric'}); const next=btn('▶',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()+1,1);render();}); row.append(prev,title,next); return row; }
-  function btn(t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; b.className='views'; b.style.padding='8px 10px'; return b; }
+  function navBar(){
+    const row=document.createElement('div'); row.className='controls'; row.style.margin='6px 0 8px';
+    const prev=navBtn('◀',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()-1,1);render();});
+    const title=document.createElement('strong'); title.className='monthtitle'; title.style.margin='0 8px'; title.textContent=CUR.toLocaleString([], {month:'long', year:'numeric'});
+    const next=navBtn('▶',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()+1,1);render();});
+    row.append(prev,title,next); return row;
+  }
+  function navBtn(t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; b.className='navbtn'; return b; }
 
   function chip(e,withTime){ const c=document.createElement('div'); c.className='chip'; const t=document.createElement('div'); t.innerHTML=`<strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span>`; c.appendChild(t); if(withTime){ const tm=document.createElement('time'); tm.textContent=formatRange(e.start,e.end||e.start); c.prepend(tm);} c.onclick=()=>openModal(e); return c; }
   function card(e){ const k=document.createElement('article'); k.className='card'; const img=document.createElement('img'); img.src=e.image||placeholder(e.title); k.appendChild(img); const box=document.createElement('div'); box.className='pad'; k.appendChild(box); const h=document.createElement('h3'); h.textContent=e.title; box.appendChild(h); const p=document.createElement('div'); p.className='mini'; p.textContent=formatRange(e.start,e.end||e.start); box.appendChild(p); const cat=document.createElement('span'); cat.className='pill'; cat.textContent=e.category||'General'; box.appendChild(cat); const d=document.createElement('p'); d.textContent=e.description||''; box.appendChild(d); const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e);}; box.appendChild(a); return k; }
@@ -317,15 +332,6 @@
   }
 
   // ---------- Fuzzy search helpers ----------
-  function initFuzzy(events){
-    fuse = new Fuse(events, {
-      includeScore: true,
-      threshold: 0.38,
-      ignoreLocation: true,
-      minMatchCharLength: 2,
-      keys: ['title','description','category','location']
-    });
-  }
   function fuzzyFilter(query, list){
     if(!query.trim()) return list;
     const localFuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
