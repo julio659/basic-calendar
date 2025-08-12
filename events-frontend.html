@@ -49,8 +49,7 @@
     overflow:hidden; min-height:0;
   }
   .clamp::after{
-    content:"";
-    position:absolute; inset:auto 0 0 0; height:2.4em;
+    content:""; position:absolute; inset:auto 0 0 0; height:2.4em;
     background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,1));
   }
 
@@ -65,20 +64,31 @@
   .window .content{padding:16px; overflow:auto}
   .close{float:right;background:transparent;border:0;color:var(--ink);font-size:28px;cursor:pointer}
 
-  .actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
-  .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
+  /* Action bar (icon buttons) */
+  .actionbar{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    padding:8px 16px; border-bottom:1px solid var(--line); background:#fff;
+    position:sticky; top:0; z-index:2;
+  }
+  .iconbtn{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    border:1px solid var(--line); background:linear-gradient(90deg,#ffffff,#eef6ff);
+    padding:8px 12px; border-radius:999px; font-weight:800; color:#0b1220;
+    box-shadow:0 6px 12px rgba(15,23,42,.06);
+  }
+  .iconbtn svg{width:18px;height:18px}
+  .iconbtn:hover{box-shadow:0 10px 18px rgba(15,23,42,.10)}
+  .spacer{flex:1}
 
-  /* Popover for “More” (fixed so it never clips) */
-  .popover{
-    position:fixed; min-width:240px; max-width:320px; z-index:2000;
-    background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 18px 36px rgba(2,8,23,.18);
-    padding:8px; display:none;
+  /* Calendar chooser popover */
+  .cal-pop{
+    position:fixed; z-index:2000; background:#fff; border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 18px 36px rgba(2,8,23,.18); padding:10px; display:none; min-width:280px;
   }
-  .popover.open{display:block}
-  .popover a, .popover button{
-    display:block; width:100%; text-align:left; border:0; background:transparent; padding:10px 10px; border-radius:10px; cursor:pointer; color:var(--ink);
-  }
-  .popover a:hover, .popover button:hover{background:#f3f7ff}
+  .cal-pop.open{display:block}
+  .cal-pop .row{display:flex; flex-wrap:wrap; gap:8px}
+  .cal-pop a{border:1px solid var(--line); border-radius:10px; padding:8px 10px; text-decoration:none; color:var(--ink); background:#fff}
+  .cal-pop a:hover{background:#f3f7ff}
 
   /* Toast */
   .toast{
@@ -113,9 +123,13 @@
 
 <div class="wrap" id="content" aria-live="polite"></div>
 
-<!-- Toast & Popover roots -->
+<!-- Toast -->
 <div class="toast" id="toast">Link copied</div>
-<div class="popover" id="popover"></div>
+<!-- Calendar chooser popover -->
+<div class="cal-pop" id="calPop">
+  <div style="font-weight:800;margin-bottom:8px">Save to your calendar</div>
+  <div class="row" id="calLinks"></div>
+</div>
 
 <!-- Modal -->
 <div class="modal" id="modal" aria-modal="true" role="dialog" aria-labelledby="mTitle">
@@ -125,25 +139,50 @@
       <h3 id="mTitle" style="margin:0"></h3>
       <div class="mini" id="mWhen"></div>
     </header>
+
+    <!-- NEW: action bar with icons -->
+    <div class="actionbar" id="actionbar">
+      <button class="iconbtn" id="shareX" title="Share on X" aria-label="Share on X">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16M20 4L4 20" stroke="#0f172a" stroke-width="2"/></svg> X
+      </button>
+      <button class="iconbtn" id="shareFb" title="Share on Facebook" aria-label="Share on Facebook">
+        <svg viewBox="0 0 24 24" fill="#1877F2"><path d="M22 12.07C22 6.48 17.52 2 11.93 2S2 6.48 2 12.07c0 5.01 3.66 9.16 8.44 9.93v-7.02H7.9v-2.91h2.54V9.41c0-2.5 1.49-3.88 3.77-3.88 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.91h-2.34V22c4.78-.77 8.44-4.92 8.44-9.93z"/></svg> Facebook
+      </button>
+      <button class="iconbtn" id="shareLi" title="Share on LinkedIn" aria-label="Share on LinkedIn">
+        <svg viewBox="0 0 24 24" fill="#0A66C2"><path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V23h-4V8zm7 0h3.8v2.05h.05c.53-1 1.85-2.05 3.8-2.05 4.07 0 4.82 2.68 4.82 6.17V23h-4v-6.71c0-1.6-.03-3.66-2.23-3.66-2.24 0-2.58 1.74-2.58 3.54V23h-3.86V8z"/></svg> LinkedIn
+      </button>
+
+      <div class="spacer"></div>
+
+      <button class="iconbtn" id="saveCal" title="Save to calendar" aria-label="Save to calendar">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="#0f172a" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#0f172a" stroke-width="2"/></svg>
+        Save
+      </button>
+      <button class="iconbtn" id="copyLink" title="Copy event link" aria-label="Copy event link">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M8 12a4 4 0 014-4h3a4 4 0 010 8h-3" stroke="#0f172a" stroke-width="2"/><path d="M16 12a4 4 0 01-4 4H9a4 4 0 110-8h3" stroke="#0f172a" stroke-width="2"/></svg>
+        Copy link
+      </button>
+      <button class="iconbtn" id="emailBtn" title="Email event" aria-label="Email event">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#0f172a" stroke-width="2"/><path d="M3 7l9 7 9-7" stroke="#0f172a" stroke-width="2"/></svg>
+        Email
+      </button>
+    </div>
+
     <div class="content" id="modalContent" tabindex="0">
       <img id="mImg" alt="" style="width:100%;max-height:260px;object-fit:cover;display:none;border-radius:12px">
       <p id="mDesc" style="margin-top:12px"></p>
       <div class="mini" id="mWhere"></div>
       <div id="mVideo" style="margin-top:12px"></div>
-      <div class="actions" id="mActions" style="display:none">
-        <a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a>
-        <button class="btn" id="moreBtn" style="display:none">More ▾</button>
-      </div>
+      <!-- RSVP button stays near content -->
+      <div style="margin-top:14px"><a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a></div>
     </div>
   </div>
 </div>
 
-<!-- Firebase (must load BEFORE our app script) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<!-- Fuse.js -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
-
 <script>
   /* ---------------- Firebase init ---------------- */
   const firebaseConfig = {
@@ -155,7 +194,7 @@
     appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
   };
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  const db=firebase.firestore();
 
   function subscribeEvents(cb){
     const statusBar = document.getElementById('status');
@@ -168,10 +207,9 @@
       },
       err => {
         console.error('Firestore listener error:', err);
-        const msg = err && err.code === 'permission-denied'
+        statusBar.textContent = err?.code === 'permission-denied'
           ? 'Connection error: Firestore rules block reads on basic_calendar/live.'
           : `Connection error: ${err?.message || 'unknown'}`;
-        document.getElementById('status').textContent = msg;
       }
     );
   }
@@ -185,14 +223,15 @@
   const nextMonthBtn=document.getElementById('nextMonth');
   const todayBtn=document.getElementById('todayBtn');
   const toastEl=document.getElementById('toast');
-  const popover=document.getElementById('popover');
+  const calPop=document.getElementById('calPop');
+  const calLinks=document.getElementById('calLinks');
+
   const modal=document.getElementById('modal');
-  const mActions=document.getElementById('mActions');
   const mRsvp=document.getElementById('mRsvp');
-  const moreBtn=document.getElementById('moreBtn');
 
   let EVENTS=[]; 
   let CURRENT_LIST=[];
+  let CURRENT_EVENT=null;
   let FOCUS_BEFORE=null;
   let PIVOT = startOfDay(new Date());
 
@@ -206,6 +245,7 @@
   function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
   function toDateInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
   function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
+  function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
   function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
   function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
   function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
@@ -254,6 +294,17 @@
   filterSel.onchange=render; searchInput.oninput=render;
 
   /* ---------------- Data selection ---------------- */
+  function globalRange(events){
+    if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
+    let min=Infinity, max=0;
+    events.forEach(e=>{
+      const s=+new Date(e.start||Date.now()); if(s<min) min=s;
+      let m=s; const r=parseRRULE(e.rrule||'');
+      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; }
+      if(m>max) max=m;
+    });
+    const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
+  }
   function activeEvents(scope){
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
@@ -321,9 +372,10 @@
     return k; 
   }
 
-  /* ---------------- Modal & Popover ---------------- */
+  /* ---------------- Modal with action bar ---------------- */
   function openModal(e, list){
     CURRENT_LIST = list || activeEvents('all');
+    CURRENT_EVENT = e;
     FOCUS_BEFORE = document.activeElement;
 
     document.getElementById('mTitle').textContent=e.title;
@@ -333,40 +385,28 @@
     if(e.image){ img.src=e.image; img.style.display='block'; } else img.style.display='none';
 
     document.getElementById('mDesc').textContent=e.description||'';
-    document.getElementById('mWhere').textContent=e.location||'';
+
+    // Location turns into a clickable map link (placeUrl wins; else search query)
+    const where=document.getElementById('mWhere');
+    const placeHref = e.placeUrl ? e.placeUrl :
+      (e.location ? 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location) : '');
+    where.innerHTML = e.location ? `<a href="${placeHref}" target="_blank" rel="noopener">${escapeHtml(e.location)}</a>` : '';
 
     const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
 
-    // Actions
-    const items=[];
-    if(e.rsvp){ const a=document.getElementById('mRsvp'); a.href=e.rsvp; a.style.display='inline-flex'; } else { document.getElementById('mRsvp').style.display='none'; }
-    if(e.location && e.location.trim()) items.push(popLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
-    items.push(popLink('Add to Google Calendar', googleCalLink(e)));
-    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); const icsUrl=URL.createObjectURL(icsBlob);
-    items.push(popLink('Download ICS', icsUrl, true, (e.title||'event')+'.ics'));
-    const shareBtn=document.createElement('button'); shareBtn.textContent='Copy share link';
-    shareBtn.onclick=async ()=>{
-      const url=new URL(location.href);
-      if(e.id) url.searchParams.set('e', e.id);
-      url.searchParams.set('d', toDateInput(PIVOT));
-      url.searchParams.delete('date'); url.searchParams.delete('event');
-      const link=url.toString();
-      try{ await navigator.clipboard.writeText(link); showToast('Link copied!', link); }
-      catch{ showToast('Copy this link:', link); }
-    };
-    items.push(shareBtn);
-    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(popLink(label, href)); });
+    // RSVP primary
+    if(e.rsvp){ mRsvp.href=e.rsvp; mRsvp.style.display='inline-flex'; } else { mRsvp.style.display='none'; }
 
-    const hasMenu = items.length>0;
-    moreBtn.style.display = hasMenu ? 'inline-block' : 'none';
-    mActions.style.display = (e.rsvp || hasMenu) ? 'flex' : 'none';
+    // Wire action bar buttons
+    const deep = buildDeepLink(e);
+    document.getElementById('shareX').onclick   = ()=>openShare('x', deep, e);
+    document.getElementById('shareFb').onclick  = ()=>openShare('fb', deep, e);
+    document.getElementById('shareLi').onclick  = ()=>openShare('li', deep, e);
+    document.getElementById('copyLink').onclick = ()=>copyLink(deep);
+    document.getElementById('emailBtn').onclick = ()=>emailEvent(e, deep);
+    document.getElementById('saveCal').onclick  = (ev)=>showCalChooser(ev.currentTarget, e, deep);
 
-    moreBtn.onclick=(ev)=>{ ev.stopPropagation(); renderPopover(ev.currentTarget, items); };
-    document.addEventListener('click', onDocClick);
-    function onDocClick(ev){ if(popover && !popover.contains(ev.target)) hidePopover(); }
-    modal._onDocClick = onDocClick;
-
-    // Deep link
+    // Update URL deep link
     if(e.id){
       const u=new URL(location.href);
       u.searchParams.set('e', e.id);
@@ -380,52 +420,121 @@
     document.body.style.overflow='hidden';
 
     window.addEventListener('keydown', onKey);
-    function onKey(ev){
-      if(ev.key==='Escape'){ if(popover.classList.contains('open')) hidePopover(); else closeModal(); }
-      if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
-        const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
-        if(idx>-1){
-          ev.preventDefault();
-          const nextIdx = ev.key==='ArrowRight' ? (idx+1)%CURRENT_LIST.length : (idx-1+CURRENT_LIST.length)%CURRENT_LIST.length;
-          openModal(CURRENT_LIST[nextIdx], CURRENT_LIST);
-        }
-      }
-    }
+    function onKey(ev){ if(ev.key==='Escape'){ closeModal(); } }
     modal._onKey = onKey;
   }
 
   function closeModal(){
-    hidePopover();
+    hideCalChooser();
     modal.style.display='none';
     document.body.style.overflow='';
     const u=new URL(location.href); u.searchParams.delete('e'); history.replaceState(null,'',u.toString());
     if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
-    if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
     if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
   }
   document.getElementById('close').onclick=closeModal;
   modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
 
-  function renderPopover(anchor, nodes){
-    popover.innerHTML=''; nodes.forEach(n=>popover.appendChild(n));
-    const r = anchor.getBoundingClientRect(), margin=8, width=260;
-    let top = r.bottom + margin, left = r.right - width;
-    const height = 12 + nodes.length*44;
-    if (top + height > window.innerHeight) top = r.top - height - margin;
-    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-    popover.style.top = `${top}px`; popover.style.left = `${left}px`; popover.style.width=`${width}px`;
-    popover.classList.add('open');
-    window.addEventListener('scroll', hidePopover, {once:true});
-    window.addEventListener('resize', hidePopover, {once:true});
+  /* --------- Action bar helpers --------- */
+  function buildDeepLink(e){
+    const url=new URL(location.href);
+    if(e.id) url.searchParams.set('e', e.id);
+    url.searchParams.set('d', toDateInput(PIVOT));
+    url.searchParams.delete('date'); url.searchParams.delete('event');
+    return url.toString();
   }
-  function hidePopover(){ popover.classList.remove('open'); }
-  function popLink(text, href, download=false, filename=''){
-    const a=document.createElement('a'); a.textContent=text; a.href=href;
-    if(download){ a.download=filename||'download'; } else { a.target='_blank'; a.rel='noopener'; }
-    return a;
+  function openShare(network, link, e){
+    const text = encodeURIComponent((e.title||'Event') + ' – ' + formatRange(e.start, e.end||e.start));
+    let href='#';
+    if(network==='x'){
+      href = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(link)}`;
+    }else if(network==='fb'){
+      href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+    }else if(network==='li'){
+      href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
+    }
+    window.open(href,'_blank','noopener,noreferrer,width=720,height=600');
+  }
+  async function copyLink(link){
+    try{ await navigator.clipboard.writeText(link); showToast('Link copied!', link); }
+    catch{ showToast('Copy this link:', link); }
+  }
+  function emailEvent(e, link){
+    const subject = encodeURIComponent(e.title||'Event');
+    const body = encodeURIComponent(`${e.title||'Event'}\n${formatRange(e.start,e.end||e.start)}\n${e.location||''}\n\n${e.description||''}\n\nMore info: ${link}`);
+    location.href = `mailto:?subject=${subject}&body=${body}`;
   }
 
-  /* ---------------- Embeds & calendar helpers ---------------- */
+  // Calendar chooser (Google, Apple, Outlook desktop, Outlook.com, Yahoo, Other/ICS)
+  function showCalChooser(anchor, e, link){
+    const items = [
+      ['Google', googleCalLink(e)],
+      ['Apple',  makeICSUrl(e, true)],            // download .ics
+      ['Outlook', makeICSUrl(e, true)],           // desktop Outlook uses .ics
+      ['Outlook.com', outlookLiveLink(e)],
+      ['Yahoo', yahooCalLink(e)],
+      ['Other (.ics)', makeICSUrl(e, true)]
+    ];
+    calLinks.innerHTML='';
+    items.forEach(([label, href])=>{
+      const a=document.createElement('a'); a.textContent=label; a.href=href;
+      if(href.startsWith('data:') || href.startsWith('blob:')) a.setAttribute('download',(e.title||'event')+'.ics');
+      else { a.target='_blank'; a.rel='noopener'; }
+      calLinks.appendChild(a);
+    });
+
+    const r = anchor.getBoundingClientRect(), margin=8, width=300;
+    let top = r.bottom + margin, left = r.right - width;
+    if (top + 200 > window.innerHeight) top = r.top - 200 - margin; // flip if needed
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+    calPop.style.top = `${top}px`; calPop.style.left = `${left}px`; calPop.style.width=`${width}px`;
+    calPop.classList.add('open');
+
+    window.addEventListener('click', onDocClick);
+    function onDocClick(ev){ if(!calPop.contains(ev.target) && ev.target!==anchor){ hideCalChooser(); window.removeEventListener('click', onDocClick); } }
+  }
+  function hideCalChooser(){ calPop.classList.remove('open'); }
+
+  /* --------- Links for calendar providers --------- */
+  function googleCalLink(e){
+    const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
+    const text='&text='+encodeURIComponent(e.title||'Event');
+    const dates='&dates='+fmtICS(e.start)+'/'+fmtICS(e.end||e.start);
+    const details=e.description? '&details='+encodeURIComponent(e.description):'';
+    const location=e.location? '&location='+encodeURIComponent(e.location):'';
+    return base+text+dates+details+location;
+  }
+  function outlookLiveLink(e){
+    const base='https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
+    const subject='&subject='+encodeURIComponent(e.title||'Event');
+    const start='&startdt='+encodeURIComponent(new Date(e.start).toISOString());
+    const end='&enddt='+encodeURIComponent(new Date(e.end||e.start).toISOString());
+    const body=e.description? '&body='+encodeURIComponent(e.description):'';
+    const location=e.location? '&location='+encodeURIComponent(e.location):'';
+    return base+subject+start+end+body+location;
+  }
+  function yahooCalLink(e){
+    // Yahoo prefers duration; fall back to start+end if needed
+    const s=new Date(e.start), e2=new Date(e.end||e.start);
+    const durMinutes=Math.max(30, Math.round((e2-s)/60000));
+    const dur=`${String(Math.floor(durMinutes/60)).padStart(2,'0')}${String(durMinutes%60).padStart(2,'0')}`;
+    const base='https://calendar.yahoo.com/?v=60&view=d&type=20';
+    const st='&st='+fmtICS(s).replace(/Z$/,'Z'); // UTC
+    const title='&title='+encodeURIComponent(e.title||'Event');
+    const desc=e.description? '&desc='+encodeURIComponent(e.description):'';
+    const inLoc=e.location? '&in_loc='+encodeURIComponent(e.location):'';
+    return base+title+st+'&dur='+dur+desc+inLoc;
+  }
+  function makeICSUrl(e, asBlob){
+    const ics = singleICS(e);
+    if(asBlob){
+      const blob=new Blob([ics],{type:'text/calendar'});
+      return URL.createObjectURL(blob);
+    }
+    return 'data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  }
+
+  /* ---------------- Embeds & helpers ---------------- */
   function embedVideo(url){
     if(/youtu\.be|youtube\.com/.test(url)){
       const id=(url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/)||[])[1]||'';
@@ -437,15 +546,7 @@
     }
     return '';
   }
-  function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
-  function googleCalLink(e){
-    const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
-    const text='&text='+encodeURIComponent(e.title||'Event');
-    const dates='&dates='+fmtICS(e.start)+'/'+fmtICS(e.end||e.start);
-    const details=e.description? '&details='+encodeURIComponent(e.description):'';
-    const location=e.location? '&location='+encodeURIComponent(e.location):'';
-    return base+text+dates+details+location;
-  }
+  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
   function escapeICS(s){return String(s||'').replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
   function singleICS(e){
     const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`,`BEGIN:VEVENT`];
@@ -475,19 +576,9 @@
     const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
     return fuse.search(query).map(r=>r.item);
   }
-  function globalRange(events){
-    if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
-    let min=Infinity, max=0;
-    events.forEach(e=>{
-      const s=+new Date(e.start||Date.now()); if(s<min) min=s;
-      let m=s; const r=parseRRULE(e.rrule||'');
-      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; }
-      if(m>max) max=m;
-    });
-    const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
-  }
-
-  /* ---------- REPEAT EXPANSION HELPERS (required) ---------- */
+  function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
+  function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
+  function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
   function expandRepeats(list, rangeStart, rangeEnd){
     const out=[]; list.forEach(e=>{
       if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
@@ -525,9 +616,6 @@
       }
     }); return out;
   }
-  function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
-  function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
-  function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
 </script>
 </body>
 </html>
