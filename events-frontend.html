@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Pinboard-First • Blue Theme • Deep Links)</title>
+<title>BASIC Calendar – Frontend (Pinboard-First • Blue Theme)</title>
 <style>
   :root{
     --ink:#0f172a; --muted:#475569; --card:#ffffff; --line:#e6ecf5; --chip:#f7faff;
@@ -11,17 +11,18 @@
     --shadow:0 10px 30px rgba(2,8,23,.08);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:transparent;color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  body{margin:0;background:linear-gradient(180deg,#e6f0ff,#dbeafe,#c7ddff);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   a{color:var(--blue4)}
   .wrap{max-width:1100px;margin:auto;padding:20px;background:transparent}
 
-  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.75);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
+  header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.78);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
   h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
   select,input{appearance:none;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
   select:focus,input:focus{outline:none;border-color:var(--blue3);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
 
+  /* View buttons */
   .views button{
     --g:linear-gradient(90deg,#ffffff,#dbeafe,#bfdbfe);
     border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;
@@ -31,9 +32,12 @@
   .views button:active{transform:translateY(1px)}
   .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(96,165,250,.28)}
 
+  /* Month nav – extra slim, blue/white */
   .navbtn{
-    border:1px solid var(--line);background:linear-gradient(90deg,#bfdbfe,#60a5fa);color:#0b1220;border-radius:999px;
-    padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
+    border:1px solid var(--line);
+    background:linear-gradient(90deg,#bfdbfe,#60a5fa);
+    color:#0b1220;border-radius:999px;padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer;
+    transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
   }
   .navbtn:hover{ box-shadow:0 3px 8px rgba(2,8,23,.12); filter:saturate(1.05); }
   .navbtn:active{ transform:translateY(1px); }
@@ -57,8 +61,8 @@
   .card .pad{padding:12px}
   .pill{font-size:12px;background:linear-gradient(90deg,#e0f2ff,#bfdbfe);color:#0a1220;border:0;padding:4px 10px;border-radius:999px;font-weight:800}
 
-  /* Modal: top aligned + safe padding; inner scroll; focus trap */
-  .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:flex-start;justify-content:center;padding:64px 20px}
+  /* Modal: top aligned + safe padding; inner scroll; action bar tidier */
+  .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:flex-start;justify-content:center;padding:64px 20px;z-index:1000}
   .modal .window{
     max-width:760px;width:100%;background:#fff;color:var(--ink);
     border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);
@@ -69,13 +73,26 @@
   .close{float:right;background:transparent;border:0;color:var(--ink);font-size:28px;cursor:pointer}
   .mini{color:var(--muted);font-size:13px}
 
-  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  /* Primary action + compact "More" menu */
+  .actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid var(--line);
        background:linear-gradient(90deg,#ffffff,#eef6ff);color:#0b1220;box-shadow:0 8px 16px rgba(15,23,42,.06);transition:transform .08s ease, box-shadow .2s ease}
   .btn:hover{box-shadow:0 12px 22px rgba(15,23,42,.12)}
   .btn:active{transform:translateY(1px)}
   .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
-  .btn.icon{padding:10px 12px}
+  .menu{position:relative}
+  .menu button{border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);border-radius:999px;padding:10px 12px;font-weight:800;cursor:pointer}
+  .menu button:hover{box-shadow:0 8px 16px rgba(15,23,42,.08)}
+  .menu .list{
+    position:absolute; top:100%; right:0; margin-top:8px; min-width:220px;
+    background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 18px 36px rgba(2,8,23,.18);
+    display:none; padding:8px;
+  }
+  .menu.open .list{display:block}
+  .menu .list a, .menu .list button{
+    display:block; width:100%; text-align:left; border:0; background:transparent; padding:10px 10px; border-radius:10px; cursor:pointer; color:var(--ink);
+  }
+  .menu .list a:hover, .menu .list button:hover{background:#f3f7ff}
 
   .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
   .status{font-size:12px;color:var(--muted);margin-top:6px}
@@ -114,12 +131,13 @@
       <div class="mini" id="mWhere"></div>
       <div id="mVideo" style="margin-top:12px"></div>
       <div class="actions" id="mActions" style="display:none">
-        <a class="btn primary" id="mRsvp" target="_blank" rel="noopener">RSVP / Tickets</a>
-        <a class="btn icon" id="mMap" target="_blank" rel="noopener" style="display:none">View map</a>
-        <a class="btn icon" id="mGoogle" target="_blank" rel="noopener" style="display:none">Google</a>
-        <a class="btn icon" id="mIcs" download style="display:none">ICS</a>
-        <button class="btn icon" id="mShare" type="button" style="display:none">Copy link</button>
-        <!-- attachment buttons appended here -->
+        <a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a>
+        <div class="menu" id="moreMenu" style="display:none">
+          <button type="button" id="moreBtn">More ▾</button>
+          <div class="list" id="moreList">
+            <!-- dynamic items -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -131,19 +149,18 @@
 <!-- Fuzzy search (Fuse.js) -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
-  // Paste your Firebase config
+  // Your Firebase config (as requested)
   const firebaseConfig = {
     apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
-  authDomain: "basic-calendar-6404a.firebaseapp.com",
-  projectId: "basic-calendar-6404a",
-  storageBucket: "basic-calendar-6404a.firebasestorage.app",
-  messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
+    authDomain: "basic-calendar-6404a.firebaseapp.com",
+    projectId: "basic-calendar-6404a",
+    storageBucket: "basic-calendar-6404a.firebasestorage.app",
+    messagingSenderId: "714238179784",
+    appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
   };
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
-  // --- realtime subscription to live doc ---
   function subscribeEvents(cb){
     return db.collection('basic_calendar').doc('live').onSnapshot(snap=>{
       const data=snap.exists? snap.data(): {events:[], updated:null};
@@ -163,9 +180,9 @@
 
   let EVENTS=[]; 
   let CUR=new Date(); 
-  let VIEW='pinboard';   // default to Pinboard
-  let CURRENT_LIST=[];   // for keyboard navigation
-  let FOCUS_BEFORE=null; // for focus return after modal
+  let VIEW='pinboard';
+  let CURRENT_LIST=[];
+  let FOCUS_BEFORE=null;
 
   subscribeEvents((evs, updated)=>{
     EVENTS = evs;
@@ -176,7 +193,7 @@
     // deep link
     const id = new URLSearchParams(location.search).get('event');
     if (id) {
-      const list = activeEvents('all'); // full range
+      const list = activeEvents('all'); 
       const match = list.find(x=> (x.id||'') === id);
       if (match) openModal(match, list);
     }
@@ -190,7 +207,6 @@
     filterSel.value = keep && cats.includes(keep) ? keep : '';
   }
 
-  // View switching
   document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{
     document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active'); VIEW=btn.dataset.view; render();
@@ -204,7 +220,6 @@
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
 
-    // all = global window without filtering to future/month
     if (scope==='all') {
       const [start,end]=globalRange(EVENTS);
       let list=expandRepeats(EVENTS, start, end);
@@ -255,7 +270,7 @@
     content.appendChild(list.length? grid : emptyState());
   }
 
-  // Pinboard with grouping: This week / Next month / Later
+  // Pinboard with simple grouping headers
   function renderPinboard(){ 
     const list=activeEvents(); 
     CURRENT_LIST = list.slice();
@@ -263,12 +278,11 @@
 
     const now=new Date(); now.setHours(0,0,0,0);
     const in7=new Date(now); in7.setDate(now.getDate()+7);
-    const nextMonth = new Date(now.getFullYear(), now.getMonth()+1, 1);
     const in60 = new Date(now); in60.setDate(now.getDate()+60);
 
     const buckets = [
       {label:'This week', test:e=>new Date(e.start)<=in7},
-      {label:'Next month', test:e=>new Date(e.start)>in7 && new Date(e.start)<in60},
+      {label:'Next 60 days', test:e=>new Date(e.start)>in7 && new Date(e.start)<in60},
       {label:'Later', test:e=>new Date(e.start)>=in60},
     ];
 
@@ -321,7 +335,7 @@
   function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
   function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
 
-  // --- Repeat expansion using LOCAL time (no UTC roundtrip) ---
+  // --- Repeat expansion using LOCAL time ---
   function expandRepeats(list, rangeStart, rangeEnd){
     const out=[]; list.forEach(e=>{
       if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
@@ -363,9 +377,9 @@
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
 
-  // ---------- Modal, deep links, calendar/map/share ----------
+  // ---------- Modal, deep links, add-to-cal, map, share ----------
   function openModal(e, list){
-    CURRENT_LIST = list || activeEvents(); // for keyboard nav
+    CURRENT_LIST = list || activeEvents(); 
     FOCUS_BEFORE = document.activeElement;
 
     document.getElementById('mTitle').textContent=e.title;
@@ -379,57 +393,56 @@
 
     const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
 
-    // Build actions (RSVP, map, add-to-calendar, share, attachments)
-    const actions=document.getElementById('mActions'); actions.innerHTML=''; let hasActions=false;
+    const actions=document.getElementById('mActions'); 
+    const rsvp=document.getElementById('mRsvp');
+    const menu=document.getElementById('moreMenu');
+    const listBox=document.getElementById('moreList');
+    actions.style.display='flex'; listBox.innerHTML=''; menu.classList.remove('open');
 
-    // RSVP
-    if(e.rsvp){ 
-      const r=document.createElement('a'); r.className='btn primary'; r.id='mRsvpBtn';
-      r.href=e.rsvp; r.target='_blank'; r.rel='noopener'; r.textContent='RSVP / Tickets';
-      actions.appendChild(r); hasActions=true;
+    // RSVP primary
+    if(e.rsvp){ rsvp.href=e.rsvp; rsvp.style.display='inline-flex'; } else { rsvp.style.display='none'; }
+
+    // Build "More" menu items
+    const items=[];
+
+    // Map
+    if(e.location && e.location.trim()){
+      items.push(elLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
     }
-
-    // Map (from location text)
-    if (e.location && e.location.trim()){
-      const map=document.createElement('a'); map.className='btn icon'; map.id='mMapBtn';
-      map.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim());
-      map.target='_blank'; map.rel='noopener'; map.textContent='View map';
-      actions.appendChild(map); hasActions=true;
-    }
-
-    // Add-to-Calendar
-    const g=document.createElement('a'); g.className='btn icon'; g.textContent='Google';
-    g.href=googleCalLink(e); g.target='_blank'; g.rel='noopener'; actions.appendChild(g);
-    const ics=document.createElement('a'); ics.className='btn icon'; ics.textContent='ICS';
-    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); ics.href=URL.createObjectURL(icsBlob); ics.download=(e.title||'event')+'.ics';
-    actions.appendChild(ics); hasActions=true;
-
-    // Share link (?event=ID)
-    if(e.id){
-      const share=document.createElement('button'); share.className='btn icon'; share.textContent='Copy link';
-      share.onclick=async ()=>{
-        const url=new URL(location.href); url.searchParams.set('event', e.id); const link=url.toString();
-        try{ await navigator.clipboard.writeText(link); share.textContent='Copied!'; setTimeout(()=>share.textContent='Copy link',1200);}catch{ alert(link); }
-      };
-      actions.appendChild(share); hasActions=true;
-      // Update address bar for deep link
-      const u=new URL(location.href); u.searchParams.set('event', e.id); history.replaceState(null,'',u.toString());
-    }
-
+    // Google Calendar
+    items.push(elLink('Add to Google Calendar', googleCalLink(e)));
+    // ICS
+    const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'});
+    const icsUrl=URL.createObjectURL(icsBlob);
+    items.push(elLink('Download ICS', icsUrl, true));
+    // Copy link
+    const copyBtn=document.createElement('button');
+    copyBtn.textContent='Copy share link';
+    copyBtn.onclick=async ()=>{ 
+      const url=new URL(location.href); if(e.id) url.searchParams.set('event', e.id);
+      try{ await navigator.clipboard.writeText(url.toString()); copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy share link',1200);}catch{ alert(url.toString()); }
+    };
+    items.push(copyBtn);
     // Attachments
-    (e.attachments||[]).forEach(u=>{
-      const {href,label}=parseAttachment(u);
-      const a=document.createElement('a'); a.className='btn icon'; a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=label;
-      actions.appendChild(a); hasActions=true;
-    });
+    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(elLink(label, href)); });
 
-    actions.style.display = hasActions ? 'flex' : 'none';
+    items.forEach(n=>listBox.appendChild(n));
+    menu.style.display = items.length ? 'inline-block' : 'none';
+
+    // Update deep link in address bar
+    if(e.id){ const u=new URL(location.href); u.searchParams.set('event', e.id); history.replaceState(null,'',u.toString()); }
 
     modal.style.display='flex';
-    document.getElementById('modalContent').focus(); // focus trap start
+    document.getElementById('modalContent').focus();
     document.body.style.overflow='hidden';
 
-    // Keyboard navigation
+    // Toggle menu
+    document.getElementById('moreBtn').onclick=(ev)=>{ ev.stopPropagation(); menu.classList.toggle('open'); };
+    document.addEventListener('click', onDocClick);
+    function onDocClick(ev){ if(!menu.contains(ev.target)) menu.classList.remove('open'); }
+    modal._onDocClick = onDocClick;
+
+    // Keyboard nav
     window.addEventListener('keydown', onKey);
     function onKey(ev){
       if(ev.key==='Escape'){ closeModal(); }
@@ -442,18 +455,22 @@
         }
       }
     }
-    // store to remove later
     modal._onKey = onKey;
+
+    function elLink(text, href, download){
+      const a=document.createElement('a'); a.textContent=text; a.href=href; a.target=download?'':'_blank'; a.rel=download?'':'noopener';
+      if(download){ a.download=(e.title||'event')+'.ics'; }
+      return a;
+    }
   }
 
   function closeModal(){
     modal.style.display='none';
     document.body.style.overflow='';
-    // revert deep link
     const u=new URL(location.href); u.searchParams.delete('event'); history.replaceState(null,'',u.toString());
-    // remove keyboard handler
     if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
-    // return focus
+    if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
+    const menu=document.getElementById('moreMenu'); if(menu) menu.classList.remove('open');
     if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
   }
 
@@ -472,7 +489,6 @@
     return '';
   }
 
-  // Google Calendar link & single ICS
   function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
   function googleCalLink(e){
     const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
@@ -496,7 +512,6 @@
     return lines.join('\n');
   }
 
-  // Attachment label helper
   function parseAttachment(s){
     if(!s) return {href:'#',label:'Attachment'};
     const parts = s.split('|');
@@ -509,14 +524,12 @@
     }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
   }
 
-  // Fuzzy search
   function fuzzyFilter(query, list){
     if(!query.trim()) return list;
     const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
     return fuse.search(query).map(r=>r.item);
   }
 
-  // Global search window
   function globalRange(events){
     if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
     let min=Infinity, max=0;
@@ -529,7 +542,6 @@
     const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
   }
 
-  // Repeat helpers
   function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
