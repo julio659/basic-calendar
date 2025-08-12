@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Firebase, Fixed)</title>
+<title>BASIC Calendar – Frontend (Firebase • Local-Time • Global Search + Fuzzy)</title>
 <style>
   :root{--accent:#6cc2ff;--accent2:#b87cff;--bg:#0b1324;--ink:#e8eefc;--muted:#a8bbde;--card:#121a31;--radius:16px;--shadow:0 10px 28px rgba(0,0,0,.28)}
   *{box-sizing:border-box}
@@ -37,6 +37,7 @@
   .mini{color:var(--muted);font-size:13px}
   .rsvp{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:999px;background:var(--accent);color:#061128;font-weight:800;text-decoration:none}
   .attachments a{display:inline-block;margin:6px 6px 0 0;padding:6px 10px;border:1px solid #2b3d68;border-radius:999px}
+  .no-results{padding:24px;border:1px dashed #2b3d68;border-radius:12px;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -44,11 +45,15 @@
   <div class="wrap">
     <h1>Community Calendar</h1>
     <div class="controls">
-      <div class="views"><button data-view="month" class="active">Month</button><button data-view="agenda">Agenda</button><button data-view="pinboard">Pinboard</button></div>
+      <div class="views">
+        <button data-view="month" class="active">Month</button>
+        <button data-view="agenda">Agenda</button>
+        <button data-view="pinboard">Pinboard</button>
+      </div>
       <div style="margin-left:auto"></div>
       <input type="month" id="jump" />
       <select id="filter"><option value="">All categories</option></select>
-      <input id="search" placeholder="Search events…"/>
+      <input id="search" placeholder="Search all months… (fuzzy)"/>
     </div>
   </div>
 </header>
@@ -71,10 +76,12 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Fuzzy search (Fuse.js) -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
-  // Paste the same Firebase config you used in the backend
+  // Paste the SAME Firebase config you used in the backend
   const firebaseConfig = {
-  apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
+      apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
   authDomain: "basic-calendar-6404a.firebaseapp.com",
   projectId: "basic-calendar-6404a",
   storageBucket: "basic-calendar-6404a.firebasestorage.app",
@@ -97,30 +104,51 @@
   const modal=document.getElementById('modal');
 
   let EVENTS=[]; let CUR=new Date(); let VIEW='month';
+  let fuse=null;
 
-  (async()=>{ EVENTS=await getEvents(); buildFilters(); render(); })();
+  (async()=>{
+    EVENTS=await getEvents();
+    buildFilters();
+    initFuzzy(EVENTS);
+    render();
+  })();
 
   function buildFilters(){ const cats=[...new Set(EVENTS.map(e=>e.category).filter(Boolean))]; cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;filterSel.appendChild(o);}); }
+
+  // View switching
   document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');VIEW=btn.dataset.view;render();});
   jumpInput.onchange=()=>{const [y,m]=jumpInput.value.split('-').map(Number); if(y&&m){CUR=new Date(y,m-1,1); render();}};
   filterSel.onchange=render; searchInput.oninput=render;
 
+  // Local ISO helper (no UTC conversion)
+  function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
+
   function activeEvents(){
-    const q=(searchInput.value||'').toLowerCase();
+    const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
+
+    // If searching → search across ALL months (global window) with fuzzy matching
+    if(q){
+      const [start,end]=globalRange(EVENTS);
+      let list=expandRepeats(EVENTS, start, end);
+      if(cat) list=list.filter(e=>(e.category||'')===cat);
+      list = fuzzyFilter(q, list);
+      return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
+    }
+
+    // Otherwise month-scoped
     const monthStart=new Date(CUR.getFullYear(),CUR.getMonth(),1);
     const monthEnd=new Date(CUR.getFullYear(),CUR.getMonth()+1,0,23,59);
     let list=expandRepeats(EVENTS, monthStart, monthEnd);
     if(cat) list=list.filter(e=>(e.category||'')===cat);
-    if(q) list=list.filter(e=>[e.title,e.description,e.location].join(' ').toLowerCase().includes(q));
-    return list.sort((a,b)=>new Date(a.start)-new Date(b.start));
+    return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
   }
 
   function render(){ if(VIEW==='month') renderMonth(); else if(VIEW==='agenda') renderAgenda(); else renderPinboard(); }
 
   function renderMonth(){
     const start=new Date(CUR.getFullYear(),CUR.getMonth(),1);
-    const first=new Date(start); first.setDate(1-first.getDay());
+    const first=new Date(start); first.setDate(1-first.getDay()); // Sunday start
     const days=[]; for(let i=0;i<42;i++){const d=new Date(first); d.setDate(first.getDate()+i); days.push(d);} 
     const grid=document.createElement('div'); grid.className='grid month';
     const list=activeEvents();
@@ -131,11 +159,14 @@
       list.filter(e=>sameDay(new Date(e.start),d)).forEach(e=>cell.appendChild(chip(e)));
       grid.appendChild(cell);
     });
-    content.innerHTML=''; content.appendChild(navBar()); content.appendChild(grid);
+    content.innerHTML=''; content.appendChild(navBar());
+    content.appendChild(list.length? grid : emptyState());
   }
 
-  function renderAgenda(){ const list=activeEvents(); const wrap=document.createElement('div'); wrap.className='agenda'; list.forEach(e=>wrap.appendChild(chip(e,true))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(wrap); }
-  function renderPinboard(){ const list=activeEvents(); const grid=document.createElement('div'); grid.className='pinboard'; list.forEach(e=>grid.appendChild(card(e))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(grid); }
+  function renderAgenda(){ const list=activeEvents(); const wrap=document.createElement('div'); wrap.className='agenda'; list.forEach(e=>wrap.appendChild(chip(e,true))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(list.length? wrap : emptyState()); }
+  function renderPinboard(){ const list=activeEvents(); const grid=document.createElement('div'); grid.className='pinboard'; list.forEach(e=>grid.appendChild(card(e))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(list.length? grid : emptyState()); }
+
+  function emptyState(){ const d=document.createElement('div'); d.className='no-results'; d.textContent='No events found for this view/search.'; return d; }
 
   function navBar(){ const row=document.createElement('div'); row.className='controls'; row.style.margin='6px 0 8px'; const prev=btn('◀',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()-1,1);render();}); const title=document.createElement('strong'); title.style.margin='0 8px'; title.textContent=CUR.toLocaleString([], {month:'long', year:'numeric'}); const next=btn('▶',()=>{CUR=new Date(CUR.getFullYear(),CUR.getMonth()+1,1);render();}); row.append(prev,title,next); return row; }
   function btn(t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; b.className='views'; b.style.padding='8px 10px'; return b; }
@@ -148,7 +179,7 @@
   function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
   function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
 
-  // Repeating + month filtering
+  // --- Repeat expansion using LOCAL time (no UTC roundtrip) ---
   function expandRepeats(list, rangeStart, rangeEnd){
     const out=[]; list.forEach(e=>{
       if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
@@ -164,32 +195,33 @@
           ['SU','MO','TU','WE','TH','FR','SA'].forEach((wd,idx)=>{
             if(!byday.length || byday.includes(wd)){
               const occ=new Date(weekStart); occ.setDate(weekStart.getDate()-weekStart.getDay()+idx);
-              const occEnd=new Date(occ); occEnd.setTime(occ.getTime()+(baseEnd-baseStart));
-              if(occ>=rangeStart && occ<=rangeEnd && occ<=until){ out.push({...e,start:iso(occ),end:iso(occEnd)}); }
+              occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+              const occEnd=new Date(occ.getTime() + (baseEnd - baseStart));
+              if(occ>=rangeStart && occ<=rangeEnd && occ<=until){ out.push({...e,start:isoLocal(occ),end:isoLocal(occEnd)}); }
             }
           });
           d.setDate(d.getDate()+7*interval);
         } else if(rule.FREQ==='DAILY'){
-          if(d>=rangeStart && d<=rangeEnd) out.push({...e,start:iso(d),end:iso(new Date(d.getTime()+(baseEnd-baseStart)))});
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
           d.setDate(d.getDate()+interval);
         } else if(rule.FREQ==='MONTHLY'){
-          if(d>=rangeStart && d<=rangeEnd) out.push({...e,start:iso(d),end:iso(new Date(d.getTime()+(baseEnd-baseStart)))});
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
           d = new Date(d.getFullYear(), d.getMonth()+interval, d.getDate(), d.getHours(), d.getMinutes());
         } else if(rule.FREQ==='YEARLY'){
-          if(d>=rangeStart && d<=rangeEnd) out.push({...e,start:iso(d),end:iso(new Date(d.getTime()+(baseEnd-baseStart)))});
+          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
           d = new Date(d.getFullYear()+interval, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes());
-        } else {
-          if(overlaps(e,rangeStart,rangeEnd)) out.push(e); break;
-        }
+        } else { if(overlaps(e,rangeStart,rangeEnd)) out.push(e); break; }
       }
     }); return out;
   }
-  function parseRRULE(s){ const r={}; s.split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
-  function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(Date.UTC(y,m,d,hh,mm)); }
-  function iso(d){ const z=new Date(d); z.setSeconds(0,0); return z.toISOString().slice(0,16); }
+  function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
+  function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
 
-  // Modal details (with video + attachment labels)
+  // Modal details (with video + labeled attachments)
   function openModal(e){
     document.getElementById('mTitle').textContent=e.title;
     document.getElementById('mWhen').textContent=formatRange(e.start,e.end||e.start);
@@ -222,7 +254,7 @@
     return '';
   }
 
-  // Attachment label: support "URL|Label" or fallback to nice domain/path
+  // Attachment label: support "URL|Label" or derive a friendly label from the URL
   function parseAttachment(s){
     if(!s) return {href:'#',label:'Attachment'};
     const parts = s.split('|');
@@ -234,6 +266,38 @@
       return {href:s,label: name? `${name} — ${host}` : host};
     }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
   }
+
+  // ---------- Global search helpers ----------
+  function initFuzzy(events){
+    // Create a Fuse index across all events
+    fuse = new Fuse(events, {
+      includeScore: true,
+      threshold: 0.38, // ~one small typo per word allowed
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+      keys: ['title','description','category','location']
+    });
+  }
+  function fuzzyFilter(query, list){
+    if(!query.trim()) return list;
+    // Fuse over the CURRENT list window to respect month/category when applicable
+    const localFuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
+    return localFuse.search(query).map(r=>r.item);
+  }
+
+  // Build a reasonable expansion window when searching globally
+  function globalRange(events){
+    if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
+    let min=Infinity, max=0;
+    events.forEach(e=>{
+      const s=+new Date(e.start||Date.now()); if(s<min) min=s;
+      let m=s; const r=parseRRULE(e.rrule||'');
+      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; } // assume 6 months if open-ended
+      if(m>max) max=m;
+    });
+    const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
+  }
 </script>
 </body>
 </html>
+
