@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Backend (Firebase, Patched + Cloud Load + Repeat Fix)</title>
+<title>BASIC Calendar – Backend (Firebase, Patched + Fixed)</title>
 <style>
   :root{
     --bg:#0b1324; --card:#121a31; --ink:#e8eefc; --muted:#9fb0d3;
@@ -48,8 +48,8 @@
 <body>
 <header>
   <div class="wrap">
-    <h1>BASIC Calendar – Backend</h1>
-    <div class="subtitle">Add / edit / delete events, <b>Load from Cloud</b>, then <b>Publish</b>. Frontend updates instantly.</div>
+    <h1>BASIC Calendar - Admin Console</h1>
+    <div class="subtitle">Add / edit / delete events and <b>Publish to Cloud</b>. Frontend updates instantly.</div>
   </div>
 </header>
 
@@ -104,8 +104,8 @@
       </div>
     </div>
 
-    <label>Attachments (comma‑separated – you can label as URL|Label)</label>
-    <input id="attachments" placeholder="https://…/flyer.pdf|Event Flyer, https://…/agenda.docx|Agenda" />
+    <label>Attachments (comma‑separated URLs – PDFs, docs)</label>
+    <input id="attachments" placeholder="https://…/flyer.pdf, https://…/agenda.docx" />
 
     <details style="margin-top:10px"><summary>Repeating (optional)</summary>
       <div class="split" style="margin-top:8px">
@@ -134,20 +134,19 @@
           <input id="until" type="date" />
         </div>
       </div>
-      <div class="note">Tip: If you choose <b>WEEKLY</b> and leave Days blank, we default to the start date's weekday.</div>
+      <div class="note">This uses a simple iCalendar RRULE. Leave blank for one‑time events.</div>
     </details>
 
     <div class="actions">
       <button class="primary" id="saveLocal">Save (Local)</button>
       <button class="ok" id="publish">Publish to Cloud</button>
-      <button class="ghost" id="loadCloud">Load from Cloud</button>
-      <button class="ghost" id="changeCode">Change Admin Code</button>
+      <button class="ghost" id="changeCode">Clear Admin Code</button>
       <button class="ghost" id="exportJson">Export JSON</button>
       <button class="ghost" id="exportIcs">Export ICS</button>
       <button class="warn" id="resetForm">Reset Form</button>
       <button class="danger" id="clearAll">Clear Local</button>
     </div>
-    <div class="note">Workflow: <b>Load from Cloud</b> → edit/delete locally → <b>Publish to Cloud</b>.</div>
+    <div class="note">Tip: Use <b>Save (Local)</b> to add multiple events, then publish all at once.</div>
   </section>
 
   <!-- RIGHT: List -->
@@ -164,7 +163,7 @@
 <script>
   // 1) Paste your Firebase config here
   const firebaseConfig = {
-    apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
+  apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
   authDomain: "basic-calendar-6404a.firebaseapp.com",
   projectId: "basic-calendar-6404a",
   storageBucket: "basic-calendar-6404a.firebasestorage.app",
@@ -198,16 +197,11 @@
   let EDIT_INDEX = -1; // -1 means create new
 
   // ===== Helpers =====
-  function weekdayCodeFromDateStr(dt){
-    const d=new Date(dt); return ['SU','MO','TU','WE','TH','FR','SA'][d.getDay()];
-  }
   function rrule(){
     const f=$('#freq').value; if(f==='none') return '';
     const parts=[`FREQ=${f}`];
     const i=parseInt($('#interval').value||'1',10); if(i>1) parts.push(`INTERVAL=${i}`);
-    let d=$('#byday').value.replace(/\s+/g,'');
-    if(f==='WEEKLY' && !d){ d = weekdayCodeFromDateStr($('#start').value); }
-    if(d) parts.push(`BYDAY=${d}`);
+    const d=$('#byday').value.replace(/\s+/g,''); if(d) parts.push(`BYDAY=${d}`);
     const u=$('#until').value; if(u) parts.push(`UNTIL=${u.replace(/-/g,'')}T235959Z`);
     return parts.join(';');
   }
@@ -236,6 +230,7 @@
     f('start', e.start); f('end', e.end); f('location', e.location);
     f('rsvp', e.rsvp); f('image', e.image); f('video', e.video);
     document.getElementById('attachments').value = (e.attachments||[]).join(', ');
+    // Reset repeats to defaults if empty
     document.getElementById('freq').value = (e.rrule? (e.rrule.match(/FREQ=([A-Z]+)/)||[])[1] : 'none') || 'none';
     document.getElementById('interval').value = (e.rrule? (e.rrule.match(/INTERVAL=(\d+)/)||[])[1] : 1) || 1;
     document.getElementById('byday').value = (e.rrule? (e.rrule.match(/BYDAY=([A-Z,]+)/)||[])[1] : '') || '';
@@ -268,11 +263,41 @@
           if(!confirm(`Delete “${e.title}”?`)) return;
           EVENTS.splice(i,1); save(EVENTS); render();
         };
+        
+        const delCloud = document.createElement('button');
+delCloud.className = 'danger';
+delCloud.textContent = 'Delete in Cloud';
+delCloud.onclick = async () => {
+  if (!confirm(`Delete “${e.title}” from the PUBLIC calendar now?`)) return;
+  if (!ensureAdminCode()) { alert('Admin code is required to delete in cloud.'); return; }
+  try {
+    // Build new list without this event
+    const newList = EVENTS.filter((_, idx) => idx !== i);
 
-        btns.append(edit, del); row.appendChild(btns); box.appendChild(row);
+    const payload = { events: newList, updated: Date.now(), adminCode: ADMIN_CODE };
+    console.log('[DeleteInCloud] sending', newList.length, 'events');
+
+    await COL.doc('live').set(payload);  // overwrite the cloud doc
+    EVENTS = newList;                     // keep local in sync
+    save(EVENTS);
+    render();
+    alert('Deleted from cloud and local.');
+  } catch (err) {
+    console.error('[DeleteInCloud] error', err);
+    alert(`Delete failed: ${err.code || 'unknown'}\n${err.message || ''}`);
+    if (err.code === 'permission-denied') {
+      sessionStorage.removeItem('BASIC_ADMIN_CODE');
+      ADMIN_CODE = '';
+    }
+  }
+};
+
+
+        btns.append(edit, del, delCloud); row.appendChild(btns); box.appendChild(row);
       });
   }
 
+  // Fixed: escape map typo that previously broke scripts
   function escapeICS(s){return String(s).replace(/[\\;,\n]/g, m => ({"\\":"\\\\",";":"\\;",",":"\\,","\n":"\\n"}[m]));}
   function toICS(list){
     const lines=[`BEGIN:VCALENDAR`,`VERSION:2.0`,`PRODID:-//BASIC//Calendar//EN`];
@@ -324,22 +349,14 @@
     alert('Admin code cleared. Click “Publish to Cloud” and enter the new code.');
   };
 
-  document.getElementById('loadCloud').onclick = async () => {
-    try{
-      const snap = await COL.doc('live').get();
-      const data = snap.exists ? snap.data() : {events:[]};
-      EVENTS = (data.events || []).slice();
-      EDIT_INDEX = -1; save(EVENTS); render();
-      alert('Loaded live events from the cloud. You can now edit/delete and re-publish.');
-    }catch(err){ console.error(err); alert('Could not load from cloud. Check Firebase config.'); }
-  };
-
-  document.getElementById('publish').onclick = async () => {
-    if (!EVENTS.length) { alert('No events to publish'); return; }
+ document.getElementById('publish').onclick = async () => {
+  if (!EVENTS.length) {
+    if (!confirm('No events left. Publish an empty calendar (this will clear the public calendar)?')) return;
+  }
     if (!ensureAdminCode()) { alert('Admin code is required to publish.'); return; }
 
     const payload = { events: EVENTS, updated: Date.now(), adminCode: ADMIN_CODE };
-    console.log('[Publish] sending', (payload.events || []).length, 'events');
+    console.log('[Publish] sending', (payload.events || []).length, 'events', payload);
 
     try {
       await COL.doc('live').set(payload);
@@ -347,7 +364,8 @@
       alert('Published! The public calendar will refresh automatically.');
     } catch (err) {
       console.error('[Publish] error', err);
-      alert(`Publish failed: ${err.code || 'unknown'}\n${err.message || ''}`);
+      alert(`Publish failed: ${err.code || 'unknown'}
+${err.message || ''}`);
       if (err.code === 'permission-denied') {
         sessionStorage.removeItem('BASIC_ADMIN_CODE');
         ADMIN_CODE = '';
