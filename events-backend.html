@@ -131,7 +131,7 @@
       </div>
       <div>
         <label>&nbsp;</label>
-        <button class="ghost" id="mapsHelper">Open location in Google Maps</button>
+        <button class="ghost" id="mapsHelper" type="button">Open location in Google Maps</button>
       </div>
     </div>
 
@@ -179,25 +179,25 @@
 
     <!-- Primary actions -->
     <div class="actions">
-      <button class="primary" id="saveLocal">Save (Local)</button>
-      <button class="ok" id="loadCloud">Load from Cloud</button>
-      <button class="ok" id="reviewPublish">Review & Publish</button>
-      <button class="danger" id="wipeCloud">Delete from Cloud</button>
+      <button class="primary" id="saveLocal" type="button">Save (Local)</button>
+      <button class="ok" id="loadCloud" type="button">Load from Cloud</button>
+      <button class="ok" id="reviewPublish" type="button">Review & Publish</button>
+      <button class="danger" id="wipeCloud" type="button">Delete from Cloud</button>
     </div>
 
     <!-- Secondary -->
     <div class="actions">
-      <button class="ghost" id="newEvent">New Event</button>
-      <button class="ghost" id="changeCode">Change Admin Code</button>
-      <button class="warn" id="clearAll">Clear Local</button>
-      <button class="ghost" id="importBtn">Import CSV/ICS</button>
+      <button class="ghost" id="newEvent" type="button">New Event</button>
+      <button class="ghost" id="changeCode" type="button">Change Admin Code</button>
+      <button class="warn" id="clearAll" type="button">Clear Local</button>
+      <button class="ghost" id="importBtn" type="button">Import CSV/ICS</button>
     </div>
 
     <details class="more">
       <summary>More (exports)</summary>
       <div class="row">
-        <button class="ghost" id="exportJson">Export JSON</button>
-        <button class="ghost" id="exportIcs">Export ICS</button>
+        <button class="ghost" id="exportJson" type="button">Export JSON</button>
+        <button class="ghost" id="exportIcs" type="button">Export ICS</button>
       </div>
     </details>
 
@@ -222,7 +222,7 @@
       <strong>Review changes</strong>
       <div class="right">
         <span id="reviewSummary" class="muted"></span>
-        <button class="close" id="closeReview">Close</button>
+        <button class="close" id="closeReview" type="button">Close</button>
       </div>
     </header>
     <div class="body">
@@ -242,7 +242,7 @@
       </div>
       <div class="actions" style="margin-top:14px">
         <input id="publisherName" placeholder="Your name/initials for audit log" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #2c3e6a;background:#0f1a33;color:#e8eefc">
-        <button class="ok" id="confirmPublish">Confirm Publish</button>
+        <button class="ok" id="confirmPublish" type="button">Confirm Publish</button>
       </div>
       <div class="note">We’ll write an audit entry with counts and your name.</div>
     </div>
@@ -254,18 +254,18 @@
   <div class="win">
     <header>
       <strong>Import CSV / ICS</strong>
-      <button class="close" id="closeImport">Close</button>
+      <button class="close" id="closeImport" type="button">Close</button>
     </header>
     <div class="body">
       <p class="muted">CSV headers supported: title,description,start,end,allDay,category,location,rsvp,image,video,attachments,rrule,placeUrl,draft,featured</p>
       <div class="actions">
         <input type="file" id="fileInput" accept=".csv,.ics,text/calendar" />
-        <button class="ok" id="importFile">Import File</button>
+        <button class="ok" id="importFile" type="button">Import File</button>
       </div>
       <p style="margin-top:10px">Or paste CSV rows:</p>
       <textarea id="csvPaste" placeholder="title,description,start,end,allDay,category,location,…" style="width:100%;min-height:120px"></textarea>
       <div class="actions">
-        <button class="ok" id="importCsvText">Import CSV Text</button>
+        <button class="ok" id="importCsvText" type="button">Import CSV Text</button>
       </div>
     </div>
   </div>
@@ -328,6 +328,8 @@
     return [`${y}-${m}-${da}T00:00`, `${y}-${m}-${da}T23:59`];
   }
 
+  function nowIso(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+
   function getForm(){
     const allDay = $('#allDay').checked;
     const startVal = $('#start').value;
@@ -385,7 +387,6 @@
     const row = document.getElementById('timeRow');
     row.style.opacity = checked ? .6 : 1;
   }
-  document.getElementById('allDay').addEventListener('change', (e)=>toggleAllDay(e.target.checked));
 
   function render(){
     updateCount(); updateModeLabel();
@@ -460,7 +461,6 @@
   function indexById(list){ const m=new Map(); (list||[]).forEach(e=>m.set(e.id, e)); return m; }
   function shallowEqual(a,b){
     const keys = new Set([...Object.keys(a||{}), ...Object.keys(b||{})]);
-    // ignore meta
     ['updated'].forEach(k=>keys.delete(k));
     let same=true;
     keys.forEach(k=>{ if(JSON.stringify(a[k]) !== JSON.stringify(b[k])) same=false; });
@@ -476,28 +476,19 @@
     A.forEach((v,id)=>{ if(!B.has(id)) added.push(v); else if(!shallowEqual(v, B.get(id))) changed.push(v); });
     B.forEach((v,id)=>{ if(!A.has(id)) removed.push(v); });
 
-    // Fill modal lists
     $('#addedList').innerHTML = added.map(x=>`<li>${escapeHtml(x.title||'Untitled')} — ${new Date(x.start).toLocaleString()}</li>`).join('') || '<li class="muted">None</li>';
     $('#changedList').innerHTML = changed.map(x=>`<li>${escapeHtml(x.title||'Untitled')} — ${new Date(x.start).toLocaleString()}</li>`).join('') || '<li class="muted">None</li>';
     $('#removedList').innerHTML = removed.map(x=>`<li>${escapeHtml(x.title||'Untitled')} — ${new Date(x.start).toLocaleString()}</li>`).join('') || '<li class="muted">None</li>';
     $('#reviewSummary').textContent = `Added ${added.length} • Edited ${changed.length} • Deleted ${removed.length} • Total ${EVENTS.length}`;
 
-    // Show modal
     openModal('reviewModal');
 
-    // Confirm handler
     $('#confirmPublish').onclick = async ()=>{
       const actor = ($('#publisherName').value||'').trim() || 'Unknown';
       try{
         const payload = { events: EVENTS, updated: Date.now(), adminCode: ADMIN_CODE };
         await COL.doc('live').set(payload);
-
-        // audit log
-        await LOGS.add({
-          ts: Date.now(), actor,
-          counts: { added: added.length, changed: changed.length, removed: removed.length, total: EVENTS.length }
-        });
-
+        await LOGS.add({ ts: Date.now(), actor, counts: { added: added.length, changed: changed.length, removed: removed.length, total: EVENTS.length } });
         closeModal('reviewModal');
         alert('Published! Public calendar will update automatically.');
       }catch(err){
@@ -510,43 +501,9 @@
 
   function openModal(id){ const m=document.getElementById(id); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } }
   function closeModal(id){ const m=document.getElementById(id); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } }
-  document.getElementById('closeReview').onclick=()=>closeModal('reviewModal');
 
   /* ===== Import (CSV/ICS) ===== */
-  document.getElementById('importBtn').onclick=()=>openModal('importModal');
-  document.getElementById('closeImport').onclick=()=>closeModal('importModal');
-  document.getElementById('importFile').onclick=async()=>{
-    const f=document.getElementById('fileInput').files[0];
-    if(!f){ alert('Choose a CSV or ICS file'); return; }
-    const text = await f.text();
-    const newItems = f.name.toLowerCase().endsWith('.ics') ? parseICS(text) : parseCSV(text);
-    if(!newItems.length){ alert('No items parsed.'); return; }
-    if(confirm(`Import ${newItems.length} item(s) into local list?`)){
-      // merge by id if present else push as new ids
-      newItems.forEach(ev=>{
-        if(!ev.id) ev.id = 'ev_'+Date.now()+Math.floor(Math.random()*1000);
-        const idx = EVENTS.findIndex(x=>x.id===ev.id);
-        if(idx>-1) EVENTS[idx]=ev; else EVENTS.push(ev);
-      });
-      save(EVENTS); render(); closeModal('importModal');
-    }
-  };
-  document.getElementById('importCsvText').onclick=()=>{
-    const text = document.getElementById('csvPaste').value||'';
-    const items = parseCSV(text);
-    if(!items.length){ alert('Nothing to import'); return; }
-    if(confirm(`Import ${items.length} item(s) into local list?`)){
-      items.forEach(ev=>{
-        if(!ev.id) ev.id = 'ev_'+Date.now()+Math.floor(Math.random()*1000);
-        const idx = EVENTS.findIndex(x=>x.id===ev.id);
-        if(idx>-1) EVENTS[idx]=ev; else EVENTS.push(ev);
-      });
-      save(EVENTS); render(); closeModal('importModal');
-    }
-  };
-
   function parseCSV(text){
-    // very simple CSV; split lines, naive commas (assumes no quoted commas)
     const lines=(text||'').trim().split(/\r?\n/).filter(Boolean);
     if(!lines.length) return [];
     const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
@@ -567,7 +524,7 @@
         rsvp: obj.rsvp || '',
         image: obj.image || '',
         video: obj.video || '',
-        attachments: (obj.attachments||'').split(';').concat((obj.attachments||'').includes(',')? obj.attachments.split(','):[]).filter(Boolean).slice(0,1), // accept ; or , (simple)
+        attachments: (obj.attachments||'').split(/[;,]/).map(s=>s.trim()).filter(Boolean),
         start, end, allDay,
         rrule: obj.rrule || '',
         placeUrl: obj.placeurl || obj.place_url || '',
@@ -579,11 +536,9 @@
   }
 
   function parseICS(text){
-    // very lightweight ICS reader for common fields
     const items=[]; const lines=(text||'').split(/\r?\n/);
     let cur=null;
-    const unF = s => (s||'').replace(/^DESCRIPTION:/,'').replace(/^SUMMARY:/,'');
-    function dt(v){ // supports YYYYMMDD or YYYYMMDDTHHMMSSZ
+    function dt(v){
       if(!v) return '';
       if(v.includes('T')){ const y=v.slice(0,4),m=v.slice(4,6),d=v.slice(6,8),hh=v.slice(9,11)||'00',mm=v.slice(11,13)||'00'; return `${y}-${m}-${d}T${hh}:${mm}`; }
       const y=v.slice(0,4),m=v.slice(4,6),d=v.slice(6,8); return `${y}-${m}-${d}T00:00`;
@@ -591,7 +546,7 @@
     lines.forEach(raw=>{
       const line = raw.trim();
       if(line==='BEGIN:VEVENT'){ cur={}; }
-      else if(line==='END:VEVENT'){ if(cur){ // finalize
+      else if(line==='END:VEVENT'){ if(cur){
         const allDay = cur.DTSTART && !cur.DTSTART.includes('T');
         let start = dt(cur.DTSTART||''); let end = dt(cur.DTEND||cur.DTSTART||'');
         if(allDay && start){ const [s,e]=normalizeAllDay(start); start=s; end=e; }
@@ -612,106 +567,140 @@
         }); cur=null; }
       }
       else if(cur){
-        const [k,v] = line.split(/:(.+)/); // key:value
-        const key = (k||'').split(';')[0]; // strip params
+        const [k,v] = line.split(/:(.+)/);
+        const key = (k||'').split(';')[0];
         cur[key] = (cur[key]? cur[key]+'\n' : '') + (v||'');
       }
     });
     return items;
   }
 
-  /* ===== Buttons ===== */
-  document.getElementById('mapsHelper').onclick=()=>{
-    const q = ($('#location').value||'').trim();
-    if(!q){ alert('Enter a location first.'); return; }
-    const url = 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
-    window.open(url,'_blank','noopener');
-  };
+  /* ===== Button wiring (after DOM is ready) ===== */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('mapsHelper').addEventListener('click', ()=>{
+      const q = ($('#location').value||'').trim();
+      if(!q){ alert('Enter a location first.'); return; }
+      const url = 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
+      window.open(url,'_blank','noopener');
+    });
 
-  document.getElementById('newEvent').onclick=()=>{
-    EDIT_INDEX=-1; updateModeLabel();
-    // create a fresh id slot so Save edits it (not duplicate)
-    const newId = 'ev_'+Date.now();
-    $('#title').dataset.id = newId;
-    setForm({ id:newId, start: nowIso(), end: nowIso() });
-  };
+    document.getElementById('newEvent').addEventListener('click', ()=>{
+      EDIT_INDEX=-1; updateModeLabel();
+      const newId = 'ev_'+Date.now();
+      $('#title').dataset.id = newId;
+      setForm({ id:newId, start: nowIso(), end: nowIso() });
+    });
 
-  document.getElementById('saveLocal').onclick=()=>{
-    const ev=getForm();
-    if(!ev.title || !ev.start){ alert('Title and Start are required.'); return; }
-    if(!ev.end){ ev.end = ev.start; }
+    document.getElementById('saveLocal').addEventListener('click', ()=>{
+      const ev=getForm();
+      if(!ev.title || !ev.start){ alert('Title and Start are required.'); return; }
+      if(!ev.end){ ev.end = ev.start; }
 
-    // === anti-duplicate logic ===
-    // If EDIT_INDEX is set, update that record.
-    // If EDIT_INDEX is -1 (New mode), we still check if an event with this id exists; if so, we update instead of pushing.
-    const existingIndex = EVENTS.findIndex(x=>x.id===ev.id);
-    if(EDIT_INDEX>-1){
-      EVENTS[EDIT_INDEX]=ev; EDIT_INDEX=-1; updateModeLabel();
-    }else if(existingIndex>-1){
-      EVENTS[existingIndex]=ev; // overwrite same id (prevents accidental duplicates)
-    }else{
-      EVENTS.push(ev);
-    }
-    save(EVENTS); render();
-  };
-
-  document.getElementById('loadCloud').onclick=async()=>{
-    try{
-      const doc=await COL.doc('live').get();
-      const data=doc.exists ? (doc.data()||{}) : {};
-      const list=data.events||[];
-      if(!list.length){ if(confirm('No events in cloud. Replace your local list with empty?')){ EVENTS=[]; save(EVENTS); render(); } return; }
-      if(confirm(`Load ${list.length} event(s) from cloud and replace your local list?`)){
-        EVENTS = list;
-        save(EVENTS); render();
+      const existingIndex = EVENTS.findIndex(x=>x.id===ev.id);
+      if(EDIT_INDEX>-1){
+        EVENTS[EDIT_INDEX]=ev; EDIT_INDEX=-1; updateModeLabel();
+      }else if(existingIndex>-1){
+        EVENTS[existingIndex]=ev;
+      }else{
+        EVENTS.push(ev);
       }
-    }catch(err){
-      console.error('[Load] error', err);
-      alert(`Load failed: ${err.code||'unknown'}\n${err.message||''}`);
-    }
-  };
+      save(EVENTS); render();
+    });
 
-  document.getElementById('reviewPublish').onclick=reviewPublishFlow);
+    document.getElementById('loadCloud').addEventListener('click', async ()=>{
+      try{
+        const doc=await COL.doc('live').get();
+        const data=doc.exists ? (doc.data()||{}) : {};
+        const list=data.events||[];
+        if(!list.length){ if(confirm('No events in cloud. Replace your local list with empty?')){ EVENTS=[]; save(EVENTS); render(); } return; }
+        if(confirm(`Load ${list.length} event(s) from cloud and replace your local list?`)){
+          EVENTS = list;
+          save(EVENTS); render();
+        }
+      }catch(err){
+        console.error('[Load] error', err);
+        alert(`Load failed: ${err.code||'unknown'}\n${err.message||''}`);
+      }
+    });
 
-  document.getElementById('wipeCloud').onclick=async()=>{
-    if(!confirm('Delete ALL events from the public calendar? This can be undone by publishing again.')) return;
-    if(!ensureAdminCode()) return;
-    const actor = prompt('Your name/initials for audit log?') || 'Unknown';
-    const payload={ events: [], updated: Date.now(), adminCode: ADMIN_CODE };
-    try{
-      await COL.doc('live').set(payload);
-      await LOGS.add({ ts: Date.now(), actor, counts: {added:0,changed:0,removed:'ALL',total:0}, action:'wipe' });
-      alert('Cloud list cleared.');
-    }catch(err){
-      console.error('[Delete cloud] error', err);
-      alert(`Delete failed: ${err.code||'unknown'}\n${err.message||''}`);
-      if(err.code==='permission-denied'){ ensureAdminCode(true); }
-    }
-  };
+    // FIXED: no stray parenthesis
+    document.getElementById('reviewPublish').onclick = reviewPublishFlow;
 
-  document.getElementById('changeCode').onclick=()=>{ ensureAdminCode(true); alert('Admin code cleared. Use a cloud action to enter the new one.'); };
+    document.getElementById('wipeCloud').addEventListener('click', async ()=>{
+      if(!confirm('Delete ALL events from the public calendar? This can be undone by publishing again.')) return;
+      if(!ensureAdminCode()) return;
+      const actor = prompt('Your name/initials for audit log?') || 'Unknown';
+      const payload={ events: [], updated: Date.now(), adminCode: ADMIN_CODE };
+      try{
+        await COL.doc('live').set(payload);
+        await LOGS.add({ ts: Date.now(), actor, counts: {added:0,changed:0,removed:'ALL',total:0}, action:'wipe' });
+        alert('Cloud list cleared.');
+      }catch(err){
+        console.error('[Delete cloud] error', err);
+        alert(`Delete failed: ${err.code||'unknown'}\n${err.message||''}`);
+        if(err.code==='permission-denied'){ ensureAdminCode(true); }
+      }
+    });
 
-  document.getElementById('clearAll').onclick=()=>{
-    if(confirm('Clear ALL locally saved events?')){ localStorage.removeItem(LS); EVENTS=[]; EDIT_INDEX=-1; updateModeLabel(); render(); }
-  };
+    document.getElementById('changeCode').addEventListener('click', ()=>{ ensureAdminCode(true); alert('Admin code cleared. Use a cloud action to enter the new one.'); });
 
-  document.getElementById('exportJson').onclick=()=>{
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([JSON.stringify({events:EVENTS},null,2)], {type:'application/json'}));
-    a.download='events.json'; a.click();
-  };
-  document.getElementById('exportIcs').onclick=()=>{
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([toICS(EVENTS)], {type:'text/calendar'}));
-    a.download='events.ics'; a.click();
-  };
+    document.getElementById('clearAll').addEventListener('click', ()=>{
+      if(confirm('Clear ALL locally saved events?')){ localStorage.removeItem(LS); EVENTS=[]; EDIT_INDEX=-1; updateModeLabel(); render(); }
+    });
 
-  /* ===== List render ===== */
-  function nowIso(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+    document.getElementById('exportJson').addEventListener('click', ()=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([JSON.stringify({events:EVENTS},null,2)], {type:'application/json'}));
+      a.download='events.json'; a.click();
+    });
 
-  render();
+    document.getElementById('exportIcs').addEventListener('click', ()=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([toICS(EVENTS)], {type:'text/calendar'}));
+      a.download='events.ics'; a.click();
+    });
 
-  /* ===== Utility: escape HTML ===== */
+    document.getElementById('closeReview').addEventListener('click', ()=>closeModal('reviewModal'));
+
+    document.getElementById('importBtn').addEventListener('click', ()=>openModal('importModal'));
+    document.getElementById('closeImport').addEventListener('click', ()=>closeModal('importModal'));
+    document.getElementById('importFile').addEventListener('click', async ()=>{
+      const f=document.getElementById('fileInput').files[0];
+      if(!f){ alert('Choose a CSV or ICS file'); return; }
+      const text = await f.text();
+      const newItems = f.name.toLowerCase().endsWith('.ics') ? parseICS(text) : parseCSV(text);
+      if(!newItems.length){ alert('No items parsed.'); return; }
+      if(confirm(`Import ${newItems.length} item(s) into local list?`)){
+        newItems.forEach(ev=>{
+          if(!ev.id) ev.id = 'ev_'+Date.now()+Math.floor(Math.random()*1000);
+          const idx = EVENTS.findIndex(x=>x.id===ev.id);
+          if(idx>-1) EVENTS[idx]=ev; else EVENTS.push(ev);
+        });
+        save(EVENTS); render(); closeModal('importModal');
+      }
+    });
+    document.getElementById('importCsvText').addEventListener('click', ()=>{
+      const text = document.getElementById('csvPaste').value||'';
+      const items = parseCSV(text);
+      if(!items.length){ alert('Nothing to import'); return; }
+      if(confirm(`Import ${items.length} item(s) into local list?`)){
+        items.forEach(ev=>{
+          if(!ev.id) ev.id = 'ev_'+Date.now()+Math.floor(Math.random()*1000);
+          const idx = EVENTS.findIndex(x=>x.id===ev.id);
+          if(idx>-1) EVENTS[idx]=ev; else EVENTS.push(ev);
+        });
+        save(EVENTS); render(); closeModal('importModal');
+      }
+    });
+
+    // initial render + wiring minor toggles
+    document.getElementById('allDay').addEventListener('change', (e)=>toggleAllDay(e.target.checked));
+    render();
+  });
+
+  /* ===== Misc helpers ===== */
+  function openModal(id){ const m=document.getElementById(id); if(m){ m.style.display='flex'; m.setAttribute('aria-hidden','false'); } }
+  function closeModal(id){ const m=document.getElementById(id); if(m){ m.style.display='none'; m.setAttribute('aria-hidden','true'); } }
   function escapeHtml(s){return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 </script>
 </body>
