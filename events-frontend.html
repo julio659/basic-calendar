@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Realtime • Bright Theme • Sleek Nav)</title>
+<title>BASIC Calendar – Frontend (Realtime • Bright Theme • Slim Month Nav)</title>
 <style>
   /* ===== Bright / Fun theme tokens ===== */
   :root{
@@ -40,11 +40,23 @@
   .views button:active{transform:translateY(1px)}
   .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(108,194,255,.35)}
 
-  /* Month nav (prev/next) — match the view button style */
-  .navbtn{border:1px solid var(--line);background:linear-gradient(90deg,var(--accent2),var(--accent));color:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
-  .navbtn:hover{box-shadow:0 8px 22px rgba(108,194,255,.28)}
-  .navbtn:active{transform:translateY(1px)}
-  .monthtitle{font-weight:900; color:#213047}
+  /* Month nav (prev/next) — SLIM pill with BASIC palette (blue → yellow) */
+  .navbtn{
+    border:1px solid var(--line);
+    background:linear-gradient(90deg,#0066cc,#ffcc00);
+    color:#000; /* black text for contrast on yellow end */
+    border-radius:999px;
+    padding:6px 12px;              /* slimmer */
+    font-weight:700;
+    font-size:14px;                /* smaller */
+    cursor:pointer;
+    transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
+  }
+  .navbtn:hover{ box-shadow:0 4px 10px rgba(0,0,0,.15); filter:saturate(1.05); }
+  .navbtn:active{ transform:translateY(1px); }
+  .navbtn:focus{ outline: none; box-shadow:0 0 0 3px rgba(0,102,204,.25); }
+
+  .monthtitle{font-weight:900;color:#213047;font-size:16px}
 
   /* Layout grids – gaps are transparent so host page shows through */
   .grid{display:grid;gap:16px;background:transparent}
