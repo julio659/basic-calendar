@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Firebase • Local-Time • Global Search + Fuzzy)</title>
+<title>BASIC Calendar – Frontend (Firebase • Realtime • Local-Time • Global Search + Fuzzy)</title>
 <style>
   :root{--accent:#6cc2ff;--accent2:#b87cff;--bg:#0b1324;--ink:#e8eefc;--muted:#a8bbde;--card:#121a31;--radius:16px;--shadow:0 10px 28px rgba(0,0,0,.28)}
   *{box-sizing:border-box}
@@ -38,12 +38,13 @@
   .rsvp{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:999px;background:var(--accent);color:#061128;font-weight:800;text-decoration:none}
   .attachments a{display:inline-block;margin:6px 6px 0 0;padding:6px 10px;border:1px solid #2b3d68;border-radius:999px}
   .no-results{padding:24px;border:1px dashed #2b3d68;border-radius:12px;text-align:center;color:var(--muted)}
+  .status{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>Community Calendar</h1>
+    <h1>BASIC's Calendar of Events</h1>
     <div class="controls">
       <div class="views">
         <button data-view="month" class="active">Month</button>
@@ -53,8 +54,9 @@
       <div style="margin-left:auto"></div>
       <input type="month" id="jump" />
       <select id="filter"><option value="">All categories</option></select>
-      <input id="search" placeholder="Search all months… (fuzzy)"/>
+      <input id="search" placeholder="Search for events..."/>
     </div>
+    <div class="status" id="status">Connecting…</div>
   </div>
 </header>
 <div class="wrap" id="content"></div>
@@ -80,21 +82,24 @@
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
   // Paste the SAME Firebase config you used in the backend
-  const firebaseConfig = {
-      apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
+  const firebaseConfig = {   apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
   authDomain: "basic-calendar-6404a.firebaseapp.com",
   projectId: "basic-calendar-6404a",
   storageBucket: "basic-calendar-6404a.firebasestorage.app",
   messagingSenderId: "714238179784",
-  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd"
-  };
+  appId: "1:714238179784:web:d26b77c0a4a6f7c8db68fd" };
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
-  async function getEvents(){
-    const doc=await db.collection('basic_calendar').doc('live').get();
-    const data=doc.exists? doc.data(): {events:[]};
-    return data.events||[];
+  // --- realtime subscription to live doc ---
+  function subscribeEvents(cb){
+    return db.collection('basic_calendar').doc('live').onSnapshot(snap=>{
+      const data=snap.exists? snap.data(): {events:[], updated:null};
+      cb(data.events||[], data.updated||null);
+    }, err=>{
+      console.error('onSnapshot error', err);
+      cb([], null);
+    });
   }
 
   const content=document.getElementById('content');
@@ -102,18 +107,30 @@
   const searchInput=document.getElementById('search');
   const jumpInput=document.getElementById('jump');
   const modal=document.getElementById('modal');
+  const statusBar=document.getElementById('status');
 
   let EVENTS=[]; let CUR=new Date(); let VIEW='month';
-  let fuse=null;
+  let fuse=null; let unsub=null; let lastUpdated=null;
 
-  (async()=>{
-    EVENTS=await getEvents();
+  // Start realtime
+  unsub = subscribeEvents((evs, updated)=>{
+    EVENTS = evs;
+    lastUpdated = updated;
     buildFilters();
     initFuzzy(EVENTS);
     render();
-  })();
+    const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+    statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
+  });
 
-  function buildFilters(){ const cats=[...new Set(EVENTS.map(e=>e.category).filter(Boolean))]; cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;filterSel.appendChild(o);}); }
+  function buildFilters(){
+    const keep = filterSel.value;
+    // reset options
+    filterSel.innerHTML = '<option value="">All categories</option>';
+    const cats=[...new Set((EVENTS||[]).map(e=>e.category).filter(Boolean))].sort();
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;filterSel.appendChild(o);});
+    filterSel.value = keep && cats.includes(keep) ? keep : '';
+  }
 
   // View switching
   document.querySelectorAll('.views button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.views button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');VIEW=btn.dataset.view;render();});
@@ -254,7 +271,7 @@
     return '';
   }
 
-  // Attachment label: support "URL|Label" or derive a friendly label from the URL
+  // Attachment label helper
   function parseAttachment(s){
     if(!s) return {href:'#',label:'Attachment'};
     const parts = s.split('|');
@@ -267,12 +284,11 @@
     }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
   }
 
-  // ---------- Global search helpers ----------
+  // ---------- Fuzzy search helpers ----------
   function initFuzzy(events){
-    // Create a Fuse index across all events
     fuse = new Fuse(events, {
       includeScore: true,
-      threshold: 0.38, // ~one small typo per word allowed
+      threshold: 0.38,
       ignoreLocation: true,
       minMatchCharLength: 2,
       keys: ['title','description','category','location']
@@ -280,19 +296,18 @@
   }
   function fuzzyFilter(query, list){
     if(!query.trim()) return list;
-    // Fuse over the CURRENT list window to respect month/category when applicable
     const localFuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
     return localFuse.search(query).map(r=>r.item);
   }
 
-  // Build a reasonable expansion window when searching globally
+  // ---------- Global search window for repeats ----------
   function globalRange(events){
     if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
     let min=Infinity, max=0;
     events.forEach(e=>{
       const s=+new Date(e.start||Date.now()); if(s<min) min=s;
       let m=s; const r=parseRRULE(e.rrule||'');
-      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; } // assume 6 months if open-ended
+      if(r.UNTIL){ m=+icsToDate(r.UNTIL); } else { m = s + 180*864e5; }
       if(m>max) max=m;
     });
     const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
@@ -300,4 +315,3 @@
 </script>
 </body>
 </html>
-
