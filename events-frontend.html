@@ -15,7 +15,6 @@
   a{color:var(--blue4)}
   .wrap{max-width:1100px;margin:auto;padding:16px;background:transparent}
 
-  /* Header bar (semi-frosted, but transparent-friendly) */
   header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.78);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid rgba(230,236,245,.9)}
   h1{margin:0 0 6px;font-weight:800;letter-spacing:.2px}
 
@@ -24,7 +23,6 @@
   select:focus,input:focus{outline:none;border-color:var(--blue3);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
   .status{font-size:12px;color:var(--muted);margin-top:6px}
 
-  /* Date pivot controls */
   .datebar{display:flex;align-items:center;gap:8px}
   .btn{
     border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);
@@ -35,7 +33,6 @@
   .btn:active{transform:translateY(1px)}
   .btn.icon{padding:6px 10px}
 
-  /* Pinboard */
   .pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;background:transparent}
   .group{grid-column:1/-1;margin:8px 0 0;color:#0b1220;font-weight:900}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
@@ -45,7 +42,19 @@
   .mini{color:var(--muted);font-size:13px}
   .no-results{padding:24px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);background:#fff}
 
-  /* Modal (top-aligned, scroll inside, compact actions) */
+  /* Clamp long preview descriptions in cards */
+  .clamp{
+    position:relative;
+    display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical;
+    overflow:hidden; min-height:0;
+  }
+  .clamp::after{
+    content:"";
+    position:absolute; inset:auto 0 0 0; height:2.4em;
+    background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,1));
+  }
+
+  /* Modal */
   .modal{position:fixed;inset:0;background:rgba(2,8,23,.6);display:none;align-items:flex-start;justify-content:center;padding:64px 20px;z-index:1000}
   .modal .window{
     max-width:760px;width:100%;background:#fff;color:var(--ink);
@@ -56,22 +65,36 @@
   .window .content{padding:16px; overflow:auto}
   .close{float:right;background:transparent;border:0;color:var(--ink);font-size:28px;cursor:pointer}
 
-  /* Primary RSVP + “More” menu to avoid crowding */
   .actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
   .btn.primary{background:linear-gradient(90deg,#dbeafe,#93c5fd);border-color:transparent}
+
+  /* “More” menu becomes a fixed popover (so it never clips) */
   .menu{position:relative}
   .menu button{border:1px solid var(--line);background:linear-gradient(90deg,#ffffff,#eef6ff);border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer}
   .menu button:hover{box-shadow:0 8px 16px rgba(15,23,42,.08)}
-  .menu .list{
-    position:absolute; top:100%; right:0; margin-top:8px; min-width:240px;
+
+  .popover{
+    position:fixed; /* key change */
+    min-width:240px; max-width:320px; z-index:2000;
     background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 18px 36px rgba(2,8,23,.18);
-    display:none; padding:8px;
+    padding:8px; display:none;
   }
-  .menu.open .list{display:block}
-  .menu .list a, .menu .list button{
+  .popover.open{display:block}
+  .popover a, .popover button{
     display:block; width:100%; text-align:left; border:0; background:transparent; padding:10px 10px; border-radius:10px; cursor:pointer; color:var(--ink);
   }
-  .menu .list a:hover, .menu .list button:hover{background:#f3f7ff}
+  .popover a:hover, .popover button:hover{background:#f3f7ff}
+
+  /* Toast */
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(90deg,#ffffff,#eef6ff); color:#0b1220; border:1px solid var(--line);
+    padding:12px 16px; border-radius:999px; box-shadow:0 14px 30px rgba(2,8,23,.15);
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:2500;
+    font-weight:800;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast a{color:var(--blue4); text-decoration:none; font-weight:700; margin-left:8px}
 </style>
 </head>
 <body>
@@ -79,7 +102,6 @@
   <div class="wrap">
     <h1>Community Calendar</h1>
     <div class="controls">
-      <!-- Date pivot controls (Tockify-like behavior) -->
       <div class="datebar" aria-label="Choose start date">
         <button class="btn icon" id="prevMonth" title="Previous month">◀</button>
         <input type="date" id="pivot" />
@@ -98,6 +120,11 @@
 
 <div class="wrap" id="content" aria-live="polite"></div>
 
+<!-- Toast -->
+<div class="toast" id="toast">Link copied</div>
+<!-- Floating popover root -->
+<div class="popover" id="popover"></div>
+
 <!-- Modal -->
 <div class="modal" id="modal" aria-modal="true" role="dialog" aria-labelledby="mTitle">
   <div class="window">
@@ -112,12 +139,11 @@
       <div class="mini" id="mWhere"></div>
       <div id="mVideo" style="margin-top:12px"></div>
 
-      <!-- Actions: primary RSVP + compact More menu -->
       <div class="actions" id="mActions" style="display:none">
         <a class="btn primary" id="mRsvp" target="_blank" rel="noopener" style="display:none">RSVP / Tickets</a>
         <div class="menu" id="moreMenu" style="display:none">
           <button type="button" id="moreBtn">More ▾</button>
-          <div class="list" id="moreList"></div>
+          <!-- items render into #popover (fixed) -->
         </div>
       </div>
     </div>
@@ -127,10 +153,9 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<!-- Fuzzy search -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
-  // Your Firebase config (as provided)
+  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBUWTNk3fhYSY6hAgiuaLcThzy_xp1EN-c",
     authDomain: "basic-calendar-6404a.firebaseapp.com",
@@ -142,7 +167,6 @@
   firebase.initializeApp(firebaseConfig);
   const db=firebase.firestore();
 
-  // Realtime subscription
   function subscribeEvents(cb){
     return db.collection('basic_calendar').doc('live').onSnapshot(snap=>{
       const data=snap.exists? snap.data(): {events:[], updated:null};
@@ -162,40 +186,51 @@
   const nextMonthBtn=document.getElementById('nextMonth');
   const todayBtn=document.getElementById('todayBtn');
 
-  let EVENTS=[]; 
-  let CURRENT_LIST=[];   // for modal keyboard nav
-  let FOCUS_BEFORE=null;
-  let PIVOT = startOfDay(new Date()); // default
+  const toastEl=document.getElementById('toast');
+  const popover=document.getElementById('popover');
 
-  // Initialize pivot UI (and support deep-link ?date=YYYY-MM-DD)
+  let EVENTS=[]; 
+  let CURRENT_LIST=[];
+  let FOCUS_BEFORE=null;
+  let PIVOT = startOfDay(new Date());
+
+  function showToast(text, linkHref){
+    toastEl.innerHTML = linkHref ? `${text} <a href="${linkHref}" target="_blank" rel="noopener">Open</a>` : text;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>toastEl.classList.remove('show'), 2600);
+  }
+
   function setPivot(d){
     PIVOT = startOfDay(d);
     pivotInput.value = toDateInput(PIVOT);
     render();
-    // update deep link (preserves ?event if present)
-    const u=new URL(location.href); u.searchParams.set('date', toDateInput(PIVOT)); history.replaceState(null,'',u.toString());
+    const u=new URL(location.href);
+    u.searchParams.set('d', toDateInput(PIVOT));
+    history.replaceState(null,'',u.toString());
   }
   function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
   function toDateInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 
-  // Wire date controls
   pivotInput.onchange=()=>{ if(pivotInput.value){ setPivot(new Date(pivotInput.value)); } };
   prevMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()-1, PIVOT.getDate()); setPivot(d); };
   nextMonthBtn.onclick=()=>{ const d=new Date(PIVOT.getFullYear(), PIVOT.getMonth()+1, PIVOT.getDate()); setPivot(d); };
   todayBtn.onclick=()=> setPivot(new Date());
 
-  // Live data
   subscribeEvents((evs, updated)=>{
     EVENTS = evs;
     buildFilters();
-    // set pivot from URL once on load (if provided), else today
+
     const qs = new URLSearchParams(location.search);
-    const d = qs.get('date'); if(d && !pivotInput.value){ setPivot(new Date(d)); } else if(!pivotInput.value){ setPivot(new Date()); }
+    const d = qs.get('d') || qs.get('date');
+    if(d && !pivotInput.value){ setPivot(new Date(d)); } else if(!pivotInput.value){ setPivot(new Date()); }
+
     render();
+
     const when = updated ? new Date(updated).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
     statusBar.textContent = `Live connection ✓  Last updated: ${when}`;
-    // Deep link event
-    const id = qs.get('event');
+
+    const id = qs.get('e') || qs.get('event');
     if (id) {
       const list = activeEvents('all'); 
       const match = list.find(x=> (x.id||'') === id);
@@ -212,14 +247,12 @@
   }
   filterSel.onchange=render; searchInput.oninput=render;
 
-  // Helpers
   function isoLocal(d){ const x=new Date(d); const pad=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`; }
   function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
   function fmtDate(d){ return new Date(d).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}); }
   function formatRange(a,b){ const A=new Date(a), B=new Date(b); const same=sameDay(A,B); return same? `${A.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})} • ${A.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}–${B.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : `${fmtDate(a)} – ${fmtDate(b)}`; }
   function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
 
-  // Active list (Tockify-like: from PIVOT forward), or global for search
   function activeEvents(scope){
     const q=(searchInput.value||'').trim();
     const cat=filterSel.value;
@@ -232,7 +265,6 @@
       return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
     }
 
-    // Search always scans globally so folks can find far-off events
     if(q){
       const [start,end]=globalRange(EVENTS);
       let list=expandRepeats(EVENTS, start, end);
@@ -241,17 +273,13 @@
       return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
     }
 
-    // Default: from pivot forward (up to ~3y)
     const endCap = new Date(PIVOT.getFullYear()+3, PIVOT.getMonth(), PIVOT.getDate());
     let list=expandRepeats(EVENTS, PIVOT, endCap);
     if(cat) list=list.filter(e=>(e.category||'')===cat);
     return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
   }
 
-  function render(){ renderPinboard(); }
-
-  // Pinboard with group headers relative to pivot
-  function renderPinboard(){ 
+  function render(){ 
     const list=activeEvents(); 
     CURRENT_LIST = list.slice();
     const grid=document.createElement('div'); grid.className='pinboard'; 
@@ -287,18 +315,17 @@
     const h=document.createElement('h3'); h.textContent=e.title; box.appendChild(h); 
     const p=document.createElement('div'); p.className='mini'; p.textContent=formatRange(e.start,e.end||e.start); box.appendChild(p); 
     const cat=document.createElement('span'); cat.className='pill'; cat.textContent=e.category||'General'; box.appendChild(cat); 
-    const d=document.createElement('p'); d.textContent=e.description||''; box.appendChild(d); 
+    const d=document.createElement('p'); d.className='clamp'; d.textContent=e.description||''; box.appendChild(d); 
     const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e, CURRENT_LIST);}; box.appendChild(a); 
     return k; 
   }
 
-  // ----- Modal & actions (More menu keeps things tidy)
+  /* ---------------- Modal & “More” popover ---------------- */
   const modal=document.getElementById('modal');
   const mActions=document.getElementById('mActions');
   const mRsvp=document.getElementById('mRsvp');
   const moreMenu=document.getElementById('moreMenu');
   const moreBtn=document.getElementById('moreBtn');
-  const moreList=document.getElementById('moreList');
 
   function openModal(e, list){
     CURRENT_LIST = list || activeEvents('all');
@@ -315,57 +342,62 @@
 
     const vid=document.getElementById('mVideo'); vid.innerHTML=''; if(e.video){ vid.innerHTML=embedVideo(e.video); }
 
-    // Primary RSVP
+    // RSVP primary
     if(e.rsvp){ mRsvp.href=e.rsvp; mRsvp.style.display='inline-flex'; } else { mRsvp.style.display='none'; }
 
-    // Build More menu
-    moreList.innerHTML=''; moreMenu.classList.remove('open'); 
+    // Build popover content (instead of clipped dropdown)
     const items=[];
-
-    // Map
     if(e.location && e.location.trim()){
-      items.push(menuLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
+      items.push(popLink('View map','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.location.trim())));
     }
-    // Google Calendar
-    items.push(menuLink('Add to Google Calendar', googleCalLink(e)));
-    // ICS
+    items.push(popLink('Add to Google Calendar', googleCalLink(e)));
     const icsBlob=new Blob([singleICS(e)],{type:'text/calendar'}); const icsUrl=URL.createObjectURL(icsBlob);
-    items.push(menuLink('Download ICS', icsUrl, true, (e.title||'event')+'.ics'));
-    // Share link
+    items.push(popLink('Download ICS', icsUrl, true, (e.title||'event')+'.ics'));
     const shareBtn=document.createElement('button'); shareBtn.textContent='Copy share link';
     shareBtn.onclick=async ()=>{
       const url=new URL(location.href);
-      if(e.id) url.searchParams.set('event', e.id);
-      url.searchParams.set('date', toDateInput(PIVOT));
+      if(e.id) url.searchParams.set('e', e.id);
+      url.searchParams.set('d', toDateInput(PIVOT));
+      url.searchParams.delete('date'); url.searchParams.delete('event');
       const link=url.toString();
-      try{ await navigator.clipboard.writeText(link); shareBtn.textContent='Copied!'; setTimeout(()=>shareBtn.textContent='Copy share link',1200); }
-      catch{ window.prompt('Copy this link:', link); }
+      try{ await navigator.clipboard.writeText(link); showToast('Link copied!', link); }
+      catch{ showToast('Copy this link:', link); }
     };
     items.push(shareBtn);
-    // Attachments
-    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(menuLink(label, href)); });
+    (e.attachments||[]).forEach(u=>{ const {href,label}=parseAttachment(u); items.push(popLink(label, href)); });
 
-    items.forEach(n=>moreList.appendChild(n));
+    // Show/hide More button
     moreMenu.style.display = items.length ? 'inline-block' : 'none';
     mActions.style.display = (e.rsvp || items.length) ? 'flex' : 'none';
 
-    // Update URL deep link for current event+pivot
-    if(e.id){ const u=new URL(location.href); u.searchParams.set('event', e.id); u.searchParams.set('date', toDateInput(PIVOT)); history.replaceState(null,'',u.toString()); }
+    // Wire button to show fixed popover
+    moreBtn.onclick=(ev)=>{
+      ev.stopPropagation();
+      renderPopover(ev.currentTarget, items);
+    };
+    document.addEventListener('click', onDocClick);
+    function onDocClick(ev){ if(popover && !popover.contains(ev.target)) hidePopover(); }
+    modal._onDocClick = onDocClick;
+
+    // Deep link
+    if(e.id){
+      const u=new URL(location.href);
+      u.searchParams.set('e', e.id);
+      u.searchParams.set('d', toDateInput(PIVOT));
+      u.searchParams.delete('date'); u.searchParams.delete('event');
+      history.replaceState(null,'',u.toString());
+    }
 
     modal.style.display='flex';
     document.getElementById('modalContent').focus();
     document.body.style.overflow='hidden';
 
-    // Toggle menu
-    moreBtn.onclick=(ev)=>{ ev.stopPropagation(); moreMenu.classList.toggle('open'); };
-    document.addEventListener('click', onDocClick);
-    function onDocClick(ev){ if(!moreMenu.contains(ev.target)) moreMenu.classList.remove('open'); }
-    modal._onDocClick = onDocClick;
-
     // Keyboard nav
     window.addEventListener('keydown', onKey);
     function onKey(ev){
-      if(ev.key==='Escape'){ closeModal(); }
+      if(ev.key==='Escape'){ 
+        if(popover.classList.contains('open')) hidePopover(); else closeModal(); 
+      }
       if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && CURRENT_LIST && CURRENT_LIST.length){
         const idx = CURRENT_LIST.findIndex(x=>x.id===e.id);
         if(idx>-1){
@@ -376,27 +408,53 @@
       }
     }
     modal._onKey = onKey;
-
-    function menuLink(text, href, download=false, filename=''){
-      const a=document.createElement('a'); a.textContent=text; a.href=href;
-      if(download){ a.download=filename||'download'; } else { a.target='_blank'; a.rel='noopener'; }
-      return a;
-    }
   }
 
   function closeModal(){
+    hidePopover();
     modal.style.display='none';
     document.body.style.overflow='';
-    const u=new URL(location.href); u.searchParams.delete('event'); history.replaceState(null,'',u.toString());
+    const u=new URL(location.href);
+    u.searchParams.delete('e');
+    history.replaceState(null,'',u.toString());
     if(modal._onKey){ window.removeEventListener('keydown', modal._onKey); modal._onKey=null; }
     if(modal._onDocClick){ document.removeEventListener('click', modal._onDocClick); modal._onDocClick=null; }
-    moreMenu.classList.remove('open');
     if(FOCUS_BEFORE && FOCUS_BEFORE.focus) FOCUS_BEFORE.focus();
   }
   document.getElementById('close').onclick=closeModal;
   modal.onclick=(ev)=>{ if(ev.target===modal) closeModal(); };
 
-  // Video embeds
+  /* ---------- Fixed popover (never clips) ---------- */
+  function renderPopover(anchor, nodes){
+    // populate
+    popover.innerHTML='';
+    nodes.forEach(n=>popover.appendChild(n));
+    // position near anchor using viewport coordinates
+    const r = anchor.getBoundingClientRect();
+    const margin = 8;
+    let top = r.bottom + margin;
+    let left = r.right - 260; // align right-ish
+    // flip up if would go off-screen
+    const height = 8 + nodes.length*44 + 8; // rough
+    if (top + height > window.innerHeight) top = r.top - height - margin;
+    // keep inside sides
+    left = Math.max(8, Math.min(left, window.innerWidth - 260 - 8));
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
+    popover.classList.add('open');
+
+    // close on scroll/resize
+    window.addEventListener('scroll', hidePopover, {once:true});
+    window.addEventListener('resize', hidePopover, {once:true});
+  }
+  function hidePopover(){ popover.classList.remove('open'); }
+  function popLink(text, href, download=false, filename=''){
+    const a=document.createElement('a'); a.textContent=text; a.href=href;
+    if(download){ a.download=filename||'download'; } else { a.target='_blank'; a.rel='noopener'; }
+    return a;
+  }
+
+  /* ----------- Embeds & calendar helpers ----------- */
   function embedVideo(url){
     if(/youtu\.be|youtube\.com/.test(url)){
       const id=(url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/)||[])[1]||'';
@@ -409,7 +467,6 @@
     return '';
   }
 
-  // Calendar helpers
   function fmtICS(dt){ return new Date(dt).toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; }
   function googleCalLink(e){
     const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
@@ -433,7 +490,6 @@
     return lines.join('\n');
   }
 
-  // Attachments label
   function parseAttachment(s){
     if(!s) return {href:'#',label:'Attachment'};
     const parts = s.split('|');
@@ -446,14 +502,12 @@
     }catch{return {href:s,label:s.replace(/^https?:\/\//,'')}}
   }
 
-  // Fuzzy search
   function fuzzyFilter(query, list){
     if(!query.trim()) return list;
     const fuse = new Fuse(list, { includeScore:true, threshold:0.38, ignoreLocation:true, minMatchCharLength:2, keys:['title','description','category','location'] });
     return fuse.search(query).map(r=>r.item);
   }
 
-  // Global search window for repeats
   function globalRange(events){
     if(!events || !events.length) return [new Date(Date.now()-30*864e5), new Date(Date.now()+2*365*864e5)];
     let min=Infinity, max=0;
@@ -466,44 +520,6 @@
     const pad=14*864e5; return [new Date(min-pad), new Date(max+pad)];
   }
 
-  // Repeat expansion (local time)
-  function expandRepeats(list, rangeStart, rangeEnd){
-    const out=[]; list.forEach(e=>{
-      if(!e.rrule){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
-      const rule=parseRRULE(e.rrule); if(!rule.FREQ){ if(overlaps(e,rangeStart,rangeEnd)) out.push(e); return; }
-      const baseStart=new Date(e.start); const baseEnd=new Date(e.end||e.start);
-      const until = rule.UNTIL? icsToDate(rule.UNTIL): new Date(rangeEnd);
-      const interval = parseInt(rule.INTERVAL||'1',10);
-      const byday = (rule.BYDAY||'').split(',').filter(Boolean);
-      let d=new Date(baseStart);
-      while(d<=rangeEnd && d<=until){
-        if(rule.FREQ==='WEEKLY'){
-          const weekStart=new Date(d);
-          ['SU','MO','TU','WE','TH','FR','SA'].forEach((wd,idx)=>{
-            if(!byday.length || byday.includes(wd)){
-              const occ=new Date(weekStart); occ.setDate(weekStart.getDate()-weekStart.getDay()+idx);
-              occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-              const occEnd=new Date(occ.getTime() + (baseEnd - baseStart));
-              if(occ>=rangeStart && occ<=rangeEnd && occ<=until){ out.push({...e,start:isoLocal(occ),end:isoLocal(occEnd)}); }
-            }
-          });
-          d.setDate(d.getDate()+7*interval);
-        } else if(rule.FREQ==='DAILY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d.setDate(d.getDate()+interval);
-        } else if(rule.FREQ==='MONTHLY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d = new Date(d.getFullYear(), d.getMonth()+interval, d.getDate(), d.getHours(), d.getMinutes());
-        } else if(rule.FREQ==='YEARLY'){
-          const occ=new Date(d); occ.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
-          if(occ>=rangeStart && occ<=rangeEnd) out.push({...e,start:isoLocal(occ),end:isoLocal(new Date(occ.getTime()+(baseEnd-baseStart)))});
-          d = new Date(d.getFullYear()+interval, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes());
-        } else { if(overlaps(e,rangeStart,rangeEnd)) out.push(e); break; }
-      }
-    }); return out;
-  }
   function parseRRULE(s){ const r={}; (s||'').split(';').forEach(p=>{ const [k,v]=p.split('='); if(k) r[k]=v; }); return r; }
   function icsToDate(s){ const y=+s.slice(0,4), m=+s.slice(4,6)-1, d=+s.slice(6,8), hh=+s.slice(9,11), mm=+s.slice(11,13); return new Date(y,m,d,hh,mm); }
   function overlaps(e, start, end){ const A=new Date(e.start), B=new Date(e.end||e.start); return B>=start && A<=end; }
