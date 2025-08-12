@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BASIC Calendar – Frontend (Realtime • Bright Theme • Slim Month Nav)</title>
+<title>BASIC Calendar – Frontend (Realtime • Pinboard-First • Slim Nav)</title>
 <style>
   /* ===== Bright / Fun theme tokens ===== */
   :root{
@@ -35,26 +35,26 @@
   select:focus,input:focus{outline:none;border-color:#b3d6ff;box-shadow:0 0 0 3px rgba(108,194,255,.25)}
 
   /* Sleek pill view buttons */
-  .views button{--g:linear-gradient(90deg,var(--accent2),var(--accent));border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 14px;font-weight:700;color:var(--ink);cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
+  .views button{--g:linear-gradient(90deg,var(--accent2),var(--accent));border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;font-weight:700;color:var(--ink);cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
   .views button:hover{box-shadow:0 6px 18px rgba(99,102,241,.18)}
   .views button:active{transform:translateY(1px)}
   .views button.active{background:var(--g);color:#0b1220;border-color:transparent;box-shadow:0 8px 22px rgba(108,194,255,.35)}
 
-  /* Month nav (prev/next) — SLIM pill with BASIC palette (blue → yellow) */
+  /* Month nav (prev/next) — EXTRA SLIM pill with BASIC palette (blue → yellow) */
   .navbtn{
     border:1px solid var(--line);
     background:linear-gradient(90deg,#0066cc,#ffcc00);
-    color:#000; /* black text for contrast on yellow end */
+    color:#000;
     border-radius:999px;
-    padding:6px 12px;              /* slimmer */
+    padding:4px 10px;          /* extra slim */
     font-weight:700;
-    font-size:14px;                /* smaller */
+    font-size:13px;            /* smaller */
     cursor:pointer;
     transition:transform .08s ease, box-shadow .2s ease, filter .15s ease;
   }
-  .navbtn:hover{ box-shadow:0 4px 10px rgba(0,0,0,.15); filter:saturate(1.05); }
+  .navbtn:hover{ box-shadow:0 3px 8px rgba(0,0,0,.12); filter:saturate(1.05); }
   .navbtn:active{ transform:translateY(1px); }
-  .navbtn:focus{ outline: none; box-shadow:0 0 0 3px rgba(0,102,204,.25); }
+  .navbtn:focus{ outline: none; box-shadow:0 0 0 3px rgba(0,102,204,.22); }
 
   .monthtitle{font-weight:900;color:#213047;font-size:16px}
 
@@ -69,9 +69,6 @@
   .chip{background:var(--chip);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:8px 10px;margin:8px;cursor:pointer;transition:transform .08s ease, box-shadow .2s ease}
   .chip:hover{box-shadow:0 8px 18px rgba(37,99,235,.12)}
   .chip:active{transform:translateY(1px)}
-
-  .agenda .chip{display:flex;align-items:center;gap:10px}
-  .agenda time{color:var(--muted);font-size:12px}
 
   .pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;background:transparent}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
@@ -98,9 +95,8 @@
     <h1>Community Calendar</h1>
     <div class="controls">
       <div class="views">
-        <button data-view="month" class="active">Month</button>
-        <button data-view="agenda">Agenda</button>
-        <button data-view="pinboard">Pinboard</button>
+        <button data-view="pinboard" class="active">Pinboard</button>
+        <button data-view="month">Month</button>
       </div>
       <div style="margin-left:auto"></div>
       <input type="month" id="jump" />
@@ -162,11 +158,12 @@
   const modal=document.getElementById('modal');
   const statusBar=document.getElementById('status');
 
-  let EVENTS=[]; let CUR=new Date(); let VIEW='month';
-  let unsub=null;
+  let EVENTS=[]; 
+  let CUR=new Date(); 
+  let VIEW='pinboard';   // default to Pinboard
 
   // Start realtime
-  unsub = subscribeEvents((evs, updated)=>{
+  subscribeEvents((evs, updated)=>{
     EVENTS = evs;
     buildFilters();
     render();
@@ -206,7 +203,16 @@
       return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
     }
 
-    // Otherwise month-scoped
+    if (VIEW === 'pinboard') {
+      // Show ALL upcoming events from today forward (up to ~3 years), regardless of month
+      const today = new Date(); today.setHours(0,0,0,0);
+      const future = new Date(Date.now() + 3*365*864e5);
+      let list = expandRepeats(EVENTS, today, future);
+      if(cat) list = list.filter(e => (e.category||'') === cat);
+      return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
+    }
+
+    // Month view: month-scoped
     const monthStart=new Date(CUR.getFullYear(),CUR.getMonth(),1);
     const monthEnd=new Date(CUR.getFullYear(),CUR.getMonth()+1,0,23,59);
     let list=expandRepeats(EVENTS, monthStart, monthEnd);
@@ -214,7 +220,7 @@
     return list.sort((a,b)=> new Date(a.start)-new Date(b.start));
   }
 
-  function render(){ if(VIEW==='month') renderMonth(); else if(VIEW==='agenda') renderAgenda(); else renderPinboard(); }
+  function render(){ if(VIEW==='month') renderMonth(); else renderPinboard(); }
 
   function renderMonth(){
     const start=new Date(CUR.getFullYear(),CUR.getMonth(),1);
@@ -233,8 +239,14 @@
     content.appendChild(list.length? grid : emptyState());
   }
 
-  function renderAgenda(){ const list=activeEvents(); const wrap=document.createElement('div'); wrap.className='agenda'; list.forEach(e=>wrap.appendChild(chip(e,true))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(list.length? wrap : emptyState()); }
-  function renderPinboard(){ const list=activeEvents(); const grid=document.createElement('div'); grid.className='pinboard'; list.forEach(e=>grid.appendChild(card(e))); content.innerHTML=''; content.appendChild(navBar()); content.appendChild(list.length? grid : emptyState()); }
+  function renderPinboard(){ 
+    const list=activeEvents(); 
+    const grid=document.createElement('div'); grid.className='pinboard'; 
+    list.forEach(e=>grid.appendChild(card(e))); 
+    content.innerHTML=''; 
+    // Pinboard doesn't need the month nav
+    content.appendChild(list.length? grid : emptyState()); 
+  }
 
   function emptyState(){ const d=document.createElement('div'); d.className='no-results'; d.textContent='No events found for this view/search.'; return d; }
 
@@ -247,8 +259,25 @@
   }
   function navBtn(t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; b.className='navbtn'; return b; }
 
-  function chip(e,withTime){ const c=document.createElement('div'); c.className='chip'; const t=document.createElement('div'); t.innerHTML=`<strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span>`; c.appendChild(t); if(withTime){ const tm=document.createElement('time'); tm.textContent=formatRange(e.start,e.end||e.start); c.prepend(tm);} c.onclick=()=>openModal(e); return c; }
-  function card(e){ const k=document.createElement('article'); k.className='card'; const img=document.createElement('img'); img.src=e.image||placeholder(e.title); k.appendChild(img); const box=document.createElement('div'); box.className='pad'; k.appendChild(box); const h=document.createElement('h3'); h.textContent=e.title; box.appendChild(h); const p=document.createElement('div'); p.className='mini'; p.textContent=formatRange(e.start,e.end||e.start); box.appendChild(p); const cat=document.createElement('span'); cat.className='pill'; cat.textContent=e.category||'General'; box.appendChild(cat); const d=document.createElement('p'); d.textContent=e.description||''; box.appendChild(d); const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e);}; box.appendChild(a); return k; }
+  function chip(e){ 
+    const c=document.createElement('div'); c.className='chip'; 
+    const t=document.createElement('div'); t.innerHTML=`<strong>${e.title}</strong> <span class="pill">${e.category||'General'}</span>`; 
+    c.appendChild(t); 
+    const tm=document.createElement('div'); tm.className='mini'; tm.textContent=formatRange(e.start,e.end||e.start); c.appendChild(tm);
+    c.onclick=()=>openModal(e); 
+    return c; 
+  }
+  function card(e){ 
+    const k=document.createElement('article'); k.className='card'; 
+    const img=document.createElement('img'); img.src=e.image||placeholder(e.title); k.appendChild(img); 
+    const box=document.createElement('div'); box.className='pad'; k.appendChild(box); 
+    const h=document.createElement('h3'); h.textContent=e.title; box.appendChild(h); 
+    const p=document.createElement('div'); p.className='mini'; p.textContent=formatRange(e.start,e.end||e.start); box.appendChild(p); 
+    const cat=document.createElement('span'); cat.className='pill'; cat.textContent=e.category||'General'; box.appendChild(cat); 
+    const d=document.createElement('p'); d.textContent=e.description||''; box.appendChild(d); 
+    const a=document.createElement('a'); a.href='#'; a.textContent='Details'; a.onclick=(ev)=>{ev.preventDefault(); openModal(e);}; box.appendChild(a); 
+    return k; 
+  }
 
   function placeholder(seed){ return 'https://picsum.photos/seed/'+encodeURIComponent(seed||'event')+'/600/300'; }
   function sameDay(a,b){ return a.getFullYear()==b.getFullYear() && a.getMonth()==b.getMonth() && a.getDate()==b.getDate(); }
